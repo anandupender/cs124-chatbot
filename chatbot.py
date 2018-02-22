@@ -12,6 +12,7 @@ import numpy as np
 
 from movielens import ratings
 from random import randint
+import PorterStemmer as ps 
 
 class Chatbot:
     """Simple class to implement the chatbot for PA 6."""
