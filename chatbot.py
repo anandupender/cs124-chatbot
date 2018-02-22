@@ -13,7 +13,9 @@ import numpy as np
 
 from movielens import ratings
 from random import randint
-import PorterStemmer as ps 
+from PorterStemmer import PorterStemmer
+from CreateModel import CreateModel
+import collections
 
 class Chatbot:
     """Simple class to implement the chatbot for PA 6."""
@@ -26,6 +28,12 @@ class Chatbot:
       self.is_turbo = is_turbo
       self.read_data()
       self.parsed_sentiment = dict()
+      self.model = CreateModel()
+      self.negationWords = ["didn't","not","no"]
+      self.punctuation = {"but",",",".","!",":",";"}
+      self.stemmer = PorterStemmer()
+      self.userMovies = collections.defaultdict()
+      self.sentiment = collections.defaultdict()
 
     #############################################################################
     # 1. WARM UP REPL
@@ -33,15 +41,9 @@ class Chatbot:
 
     def greeting(self):
       """chatbot greeting message"""
-      #############################################################################
       # TODO: Write a short greeting message                                      #
-      #############################################################################
 
       greeting_message = 'How can I help you?'
-
-      #############################################################################
-      #                             END OF YOUR CODE                              #
-      #############################################################################
 
       return greeting_message
 
@@ -81,55 +83,93 @@ class Chatbot:
       # calling other functions. Although modular code is not graded, it is       #
       # highly recommended                                                        #
       #############################################################################
+      print self.userMovies
 
+      if len(self.userMovies) < 5:
+        return self.getMoreMovies(input)
+      else:
+        self.reccomend()
+
+    def getMoreMovies(self,input):
       regexes = []
-      regex_main = "([\w\s]*)\"([\w\s]*)\"\s([\w\s]*)" #three capture groups
+      regex_main = "([\w\s,]*)\"([\w\s]*)\"([\w\s,]*)" #three capture groups
+
       match = []
       movie_match = ""
       words_to_sentiment = ""
+      response_sentiment = ""
+
 
       match = re.findall(regex_main, input)
-      print match
+      # print match
       if match == []:
-        response = "please type a valid response"
+        if len(self.userMovies) == 0:
+          response = "Please type a valid response. Movies should be in 'quotations'"
+          return response
+        else:
+          response = "Wait, this is interesting! Tell me about more movies"
       else:
         movie_match = match[0][1]
         if movie_match == "":
           response = "please type a movie within quotation marks"
         words_to_sentiment = match[0][0] + match[0][2]
-        print movie_match
-        print words_to_sentiment
+
         #found_sentiment_words = []
         #print (self.sentiment)
+        for index,char in enumerate(words_to_sentiment):
+          if char in self.punctuation:
+            words_to_sentiment = words_to_sentiment[:index] + " " + words_to_sentiment[index:]
 
         words_to_sentiment = words_to_sentiment.split(" ")
+        filter(None, words_to_sentiment)
+        # self.model.classifyTest(words_to_sentiment)
 
+        # attempted sentiment analysis
         pos_words = []
         neg_words = []
 
+        negationTrigger = False
         for word in words_to_sentiment:
+          word = self.stemmer.stem(word)
+          print word
           if word in self.sentiment:
             sentiment = self.sentiment[word]
-            if sentiment == 'pos':
-              pos_words.append(word)
-            elif sentiment == 'neg':
+
+            if negationTrigger == True:
+              negWord = "pos"
+              posWord = "neg"
+            else:
+              negWord = "neg"
+              posWord = "pos"
+            if sentiment == negWord:
               neg_words.append(word)
+            elif sentiment == posWord:
+              pos_words.append(word)
+
+          if word in self.negationWords:
+            negationTrigger = True
+          if word in self.punctuation:
+            negationTrigger = False
+
         if len(pos_words) > len(neg_words):
-          print("positive sentiment")
+          response_sentiment = "liked"
+          self.userMovies[movie_match] = "1"
         elif len(neg_words) > len(pos_words):
-          print("negative sentiment")
+          response_sentiment = "disliked"
+          self.userMovies[movie_match] = "-1"
         else:
           print("neutral/no sentiment")
-          #found_sentiment_words.append(word)
+          response = "Sorry, I couldn't quite tell how you feel about %s. Can you tell me more about it?" %movie_match
+          return response
 
+        if self.is_turbo == True:
+          response = 'processed %s in creative mode!!' % input
+        else:
+          # response = 'processed %s in starter mode' % input
+          response = "So, you %s %s" % (response_sentiment, movie_match)
 
-
-
-      if self.is_turbo == True:
-        response = 'processed %s in creative mode!!' % input
-      else:
-        response = 'processed %s in starter mode' % input
-
+      if len(self.userMovies) >= 5:
+        self.recommend()
       return response
 
 
@@ -144,6 +184,8 @@ class Chatbot:
       # movie i by user j
       self.titles, self.ratings = ratings()
       reader = csv.reader(open('data/sentiment.txt', 'rb'))
+      # for sentiment in reader:
+      #   self.sentiment[sentiment] = self.stemmer.stem(sentiment)
       self.sentiment = dict(reader)
 
 
@@ -192,8 +234,6 @@ class Chatbot:
       expressions of sentiment will be simple!
       Write here the description for your own chatbot!
       """
-
-
     #############################################################################
     # Auxiliary methods for the chatbot.                                        #
     #                                                                           #
