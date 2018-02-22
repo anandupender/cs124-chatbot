@@ -7,6 +7,7 @@
 ######################################################################
 import csv
 import math
+import re
 
 import numpy as np
 
@@ -23,6 +24,7 @@ class Chatbot:
       self.name = 'moviebot'
       self.is_turbo = is_turbo
       self.read_data()
+      self.parsed_sentiment = dict()
 
     #############################################################################
     # 1. WARM UP REPL
@@ -65,13 +67,63 @@ class Chatbot:
       """Takes the input string from the REPL and call delegated functions
       that
         1) extract the relevant information and
+        #regex and sentiment analysis
+        # hate = negative_word
+        #capture all words before movie, "_movie_", everything after
+        #look through captured 
         2) transform the information into a response to the user
+        # you _negaitve word_ movie
+        #let me hear another one
       """
       #############################################################################
       # TODO: Implement the extraction and transformation in this method, possibly#
       # calling other functions. Although modular code is not graded, it is       #
       # highly recommended                                                        #
       #############################################################################
+
+      regexes = []
+      regex_main = "([\w\s]*)\"([\w\s]*)\"\s([\w\s]*)" #three capture groups
+      match = []
+      movie_match = ""
+      words_to_sentiment = ""
+
+      match = re.findall(regex_main, input)
+      print match
+      if match == []:
+        response = "please type a valid response"
+      else:
+        movie_match = match[0][1]
+        if movie_match == "":
+          response = "please type a movie within quotation marks"
+        words_to_sentiment = match[0][0] + match[0][2]
+        print movie_match
+        print words_to_sentiment
+        #found_sentiment_words = []
+        #print (self.sentiment)
+
+        words_to_sentiment = words_to_sentiment.split(" ")
+
+        pos_words = []
+        neg_words = []
+
+        for word in words_to_sentiment:
+          if word in self.sentiment:
+            sentiment = self.sentiment[word]
+            if sentiment == 'pos':
+              pos_words.append(word)
+            elif sentiment == 'neg':
+              neg_words.append(word)
+        if len(pos_words) > len(neg_words):
+          print("positive sentiment")
+        elif len(neg_words) > len(pos_words):
+          print("negative sentiment")
+        else:
+          print("neutral/no sentiment")
+          #found_sentiment_words.append(word)
+
+
+
+
       if self.is_turbo == True:
         response = 'processed %s in creative mode!!' % input
       else:
