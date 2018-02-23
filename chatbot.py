@@ -7,6 +7,7 @@
 ######################################################################
 import csv
 import math
+import collections
 
 import numpy as np
 
@@ -77,6 +78,8 @@ class Chatbot:
       else:
         response = 'processed %s in starter mode' % input
 
+
+
       return response
 
 
@@ -89,7 +92,7 @@ class Chatbot:
       # This matrix has the following shape: num_movies x num_users
       # The values stored in each row i and column j is the rating for
       # movie i by user j
-      self.titles, self.ratings = ratings()
+      self.titles, self.ratings = ratings() #TODO: do we need to add this to init()?
       reader = csv.reader(open('data/sentiment.txt', 'rb'))
       self.sentiment = dict(reader)
 
@@ -97,15 +100,43 @@ class Chatbot:
     def binarize(self):
       """Modifies the ratings matrix to make all of the ratings binary"""
 
-      pass
+      numRows = len(self.ratings)
+      numCols = 0
+      if numRows > 0:
+        numCols = len(self.ratings[0])
+      
+      for row in range(numRows):
+        for col in range(numCols):
+          rating = self.ratings[row][col]
+          if rating >= 3:
+            self.ratings[row][col] = 1
+          elif rating != 0:
+            self.ratings[row][col] = -1
+
+      # pass
 
 
     def distance(self, u, v):
       """Calculates a given distance function between vectors u and v"""
       # TODO: Implement the distance function between vectors u and v]
       # Note: you can also think of this as computing a similarity measure
+      # Method: cosine similarity
 
-      pass
+      cosineSimilarity = 0
+      uNorm = 0
+      vNorm = 0
+      for i in range(len(u)):
+          cosineSimilarity += u[i] * v[i]
+          uNorm += u[i] * u[i]
+          vNorm += v[i] * v[i]
+      
+      # Normalize
+      uNorm = math.sqrt(uNorm)
+      vNorm = math.sqrt(vNorm)
+      cosineSimilarity = cosineSimilarity / (uNorm * vNorm)
+
+      return cosineSimilarity
+
 
 
     def recommend(self, u):
@@ -114,7 +145,22 @@ class Chatbot:
       # TODO: Implement a recommendation function that takes a user vector u
       # and outputs a list of movies recommended by the chatbot
 
-      pass
+      # N = set of items i rated by x
+      # for each movie
+      #    calculate rating of movie i of user x
+      #    based on sim(i,j) and rating of user x on movie j
+      # find list of top 3(?) movie ratings and return that list
+      # i.e. newA = dict(sorted(A.iteritems(), key=operator.itemgetter(1), reverse=True)[:5])
+
+      N = collections.defaultdict(lambda:0)
+      # self.titles
+      # self.ratings
+
+      for i in range(len(self.titles)):
+        
+
+
+      # pass
 
 
     #############################################################################
