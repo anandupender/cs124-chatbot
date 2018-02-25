@@ -89,7 +89,7 @@ class Chatbot:
       if len(self.userMovies) < 5:
         return self.getMoreMovies(input)
       else:
-        self.reccomend()
+        self.recommend(self.userMovies)
 
     def getMoreMovies(self,input):
       regexes = []
@@ -169,7 +169,7 @@ class Chatbot:
           # response = 'processed %s in starter mode' % input
           response = "So, you %s %s" % (response_sentiment, movie_match)
 
-      if len(self.userMovies) >= 5:
+      if len(self.userMovies) >= 5: #TODO: is this necessary?
         self.recommend()
       return response
 
@@ -211,7 +211,7 @@ class Chatbot:
 
     def distance(self, u, v):
       """Calculates a given distance function between vectors u and v"""
-      # TODO: Implement the distance function between vectors u and v]
+      # TODO: Implement the distance function between vectors u and v
       # Note: you can also think of this as computing a similarity measure
       # Method: cosine similarity
 
@@ -237,23 +237,57 @@ class Chatbot:
       collaborative filtering"""
       # TODO: Implement a recommendation function that takes a user vector u
       # and outputs a list of movies recommended by the chatbot
-
-      # N = set of items i rated by x
+      # Notes: input 'u' is actually self.userMovies (movieName, rating)
+      # 
+      # Pseudocode:
+      # N = set of items i rated by x (movie(or movieIdx?): rating)
       # for each movie
       #    calculate rating of movie i of user x
       #    based on sim(i,j) and rating of user x on movie j
       # find list of top 3(?) movie ratings and return that list
       # i.e. newA = dict(sorted(A.iteritems(), key=operator.itemgetter(1), reverse=True)[:5])
 
-      N = collections.defaultdict(lambda:0)
-      # self.titles
-      # self.ratings
+      estRatings = collections.defaultdict(lambda:0)
+      userRatings =  collections.defaultdict(lambda:0) 
 
-      for i in range(len(self.titles)):
-        
+      #TODO: [Need to test] First, need to transform movie(movieNames) to movieIdx
+      #TODO(recommended): construct userMovies by movieIdx instead of movieName
+      # This is adopted from movielens.py
+      reader = csv.reader(file('data/movies.txt'), delimiter='%', quoting=csv.QUOTE_MINIMAL)
+      movieList = []
+      for line in reader:
+        # not necessary since we want to build movieList
+        # if len(userRatings) == len(u):
+        #   break
+        movieID, title, genres = int(line[0]), line[1], line[2]
+        if title[0] == '"' and title[-1] == '"':
+          title = title[1:-1]
+        if title in u:
+          userRatings[movieID] = u[title]
+        movieList.append(title)
 
+      for movieA in range(len(self.titles)):
+        rating = 0
 
-      # pass
+        #TODO: [Need to test] if movieA is in any movieB, don't recommend
+        if movieA in userRatings:
+          continue
+
+        for movieB in userRatings:
+          similarity = self.distance(self.ratings[movieA], self.ratings[movieB])
+          userRating = userRatings[movieB]
+          rating += similarity * userRating
+
+        estRatings[movieA] = rating
+
+      #TODO: test whether this is too time consuming
+      max_value = max(estRatings.values())
+      max_keys = [k for k, v in estRatings.items() if v == max_value] # getting all keys containing the `maximum`
+      recommendations = []
+      for keys in max_keys:
+        recommendations.append(movieList[keys])
+      return recommendations
+
 
 
     #############################################################################
