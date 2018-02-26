@@ -27,12 +27,12 @@ class Chatbot:
     def __init__(self, is_turbo=False):
       self.name = 'moviebot'
       self.is_turbo = is_turbo
+      self.stemmer = PorterStemmer()
       self.read_data()
       self.parsed_sentiment = dict()
       self.model = CreateModel()
       self.negationWords = ["didn't","not","no","don't"]
       self.punctuation = {"but",",",".","!",":",";"}
-      self.stemmer = PorterStemmer()
       self.userMovies = collections.defaultdict()
       self.movieDict = collections.defaultdict(lambda:0)
       self.movie_name_to_id()
@@ -167,10 +167,7 @@ class Chatbot:
         # elif len(self.userMovies) >= 5:
         elif len(self.userMovies) >= 1:
           recommendations = self.recommend(self.userMovies)
-          #TODO adding recommendations to response:
-          # You liked "Titanic". Thank you! 
-          # That's enough for me to make a recommendation. 
-          # I suggest you watch "In the Heart of the Sea". 
+          # adding recommendations to response:
           # TODO: Would you like to hear another recommendation? (Or enter :quit if you're done.)
           response = "You %s \"%s\". Thank you! \n That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (response_sentiment, movie_match, recommendations[0])
         else:
@@ -196,21 +193,23 @@ class Chatbot:
 
         self.movieDict[title] = movieID
 
-        # if title in u:
-        #   userRatings[movieID] = u[title]
-        # movieList.append(title)
-
     def read_data(self):
       """Reads the ratings matrix from file"""
       # This matrix has the following shape: num_movies x num_users
       # The values stored in each row i and column j is the rating for
       # movie i by user j
       self.titles, self.ratings = ratings() #TODO: do we need to add this to init()?
-      reader = csv.reader(open('data/sentiment.txt', 'rb'))
-      # TODO: stem these sentiments
-      # for sentiment in reader:
-      #   self.sentiment[sentiment] = self.stemmer.stem(sentiment)
-      self.sentiment = dict(reader)
+      
+      # TODO: TEST stem these sentiments
+      self.sentiment = collections.defaultdict(lambda:0)
+      reader = csv.reader(file('data/sentiment.txt'), delimiter=',', quoting=csv.QUOTE_MINIMAL)
+      for line in reader:
+        word, posNeg = line[0], line[1]
+        word = self.stemmer.stem(word)
+        self.sentiment[word] = posNeg
+      
+      # reader = csv.reader(open('data/sentiment.txt', 'rb'))
+      # self.sentiment = dict(reader) #Original: not stemmed
       self.binarize()
 
 
@@ -270,14 +269,10 @@ class Chatbot:
 
       estRatings = collections.defaultdict(lambda:0)
 
-      #TODO: [Need to test] First, need to transform movie(movieNames) to movieIdx
-      #TODO(recommended): construct userMovies by movieIdx instead of movieName
-      # This is adopted from movielens.py
-
       for movieA in range(len(self.titles)):
         rating = 0.0
 
-        #TODO: [Need to test] if movieA is in any movieB, don't recommend
+        #if movieA is in any movieB, don't recommend
         if movieA in userRatings:
           continue
 
@@ -288,7 +283,7 @@ class Chatbot:
 
         estRatings[movieA] = rating
 
-      #TODO: test whether this is too time consuming
+      #TODO: make sure recommendations is length of 3
       max_value = max(estRatings.values())
       max_keys = [k for k, v in estRatings.items() if v == max_value] # getting all keys containing the `maximum`
       recommendations = []
