@@ -30,11 +30,12 @@ class Chatbot:
       self.read_data()
       self.parsed_sentiment = dict()
       self.model = CreateModel()
-      self.negationWords = ["didn't","not","no"]
+      self.negationWords = ["didn't","not","no","don't"]
       self.punctuation = {"but",",",".","!",":",";"}
       self.stemmer = PorterStemmer()
       self.userMovies = collections.defaultdict()
-      self.sentiment = collections.defaultdict()
+      self.movieDict = collections.defaultdict(lambda:0)
+      self.movie_name_to_id()
 
     #############################################################################
     # 1. WARM UP REPL
@@ -79,58 +80,51 @@ class Chatbot:
         # you _negaitve word_ movie
         #let me hear another one
       """
-      #############################################################################
-      # TODO: Implement the extraction and transformation in this method, possibly#
-      # calling other functions. Although modular code is not graded, it is       #
-      # highly recommended                                                        #
-      #############################################################################
-      print self.userMovies
 
-      if len(self.userMovies) < 5:
-        return self.getMoreMovies(input)
-      else:
-        self.recommend(self.userMovies)
+      regex_main = "([\w\s,']*)\"([\w\s()]*)\"([\w\s,']*)" #three capture groups
 
-    def getMoreMovies(self,input):
-      regexes = []
-      regex_main = "([\w\s,]*)\"([\w\s]*)\"([\w\s,]*)" #three capture groups
-
-      match = []
       movie_match = ""
-      words_to_sentiment = ""
-      response_sentiment = ""
-
+      parsed_input = "" 
+      response_sentiment = "" #word to describe movie sentiment by bot
+      currMovieId = 0
 
       match = re.findall(regex_main, input)
-      # print match
+      print "match: {}".format(match)
       if match == []:
         if len(self.userMovies) == 0:
-          response = "Please type a valid response. Movies should be in 'quotations'"
+          response = "Please type a valid response. Movies should be in 'quotations'" #first time user doesn't know how to input text
           return response
         else:
-          response = "Wait, this is interesting! Tell me about more movies"
+          response = "I want to hear about more movies!"    # edge case when user gets bored
+          return response
       else:
         movie_match = match[0][1]
         if movie_match == "":
-          response = "please type a movie within quotation marks"
-        words_to_sentiment = match[0][0] + match[0][2]
+          response = "Please type a movie within quotation marks"
+          return response
+        parsed_input = match[0][0] + match[0][2]
 
-        #found_sentiment_words = []
-        #print (self.sentiment)
-        for index,char in enumerate(words_to_sentiment):
+        # Check if movie exists!
+        if movie_match in self.movieDict:
+          currMovieId = self.movieDict[movie_match]
+        else:
+          response = "Sorry, but that movie is too hip for me! Can you tell me about another?"
+          return response
+
+        # FIND PUNCTUATION AND MAKE OWN WORD (ADD SPACE)
+        for index,char in enumerate(parsed_input):
           if char in self.punctuation:
-            words_to_sentiment = words_to_sentiment[:index] + " " + words_to_sentiment[index:]
+            parsed_input = parsed_input[:index] + " " + parsed_input[index:]
+        parsed_input = parsed_input.split(" ")
+        filter(None, parsed_input)
+        print parsed_input
 
-        words_to_sentiment = words_to_sentiment.split(" ")
-        filter(None, words_to_sentiment)
-        # self.model.classifyTest(words_to_sentiment)
-
-        # attempted sentiment analysis
+        # EXTRACT SENTIMENT
         pos_words = []
         neg_words = []
 
-        negationTrigger = False
-        for word in words_to_sentiment:
+        negationTrigger = False   # triggers at neg words
+        for word in parsed_input:
           word = self.stemmer.stem(word)
           print word
           if word in self.sentiment:
@@ -152,14 +146,19 @@ class Chatbot:
           if word in self.punctuation:
             negationTrigger = False
 
+        # DETERMINE COUNTS FOR NEG AND POS WORDS
         if len(pos_words) > len(neg_words):
           response_sentiment = "liked"
-          self.userMovies[movie_match] = "1"
+          self.userMovies[currMovieId] = "1"
         elif len(neg_words) > len(pos_words):
           response_sentiment = "disliked"
-          self.userMovies[movie_match] = "-1"
-        else:
+          self.userMovies[currMovieId] = "-1"
+        elif len(neg_words) == 0 and len(pos_words) == 0:
           print("neutral/no sentiment")
+          response = "So how do you feel about %s." %movie_match
+          return response
+        else:
+          print("confused sentiment")
           response = "Sorry, I couldn't quite tell how you feel about %s. Can you tell me more about it?" %movie_match
           return response
 
@@ -167,16 +166,34 @@ class Chatbot:
           response = 'processed %s in creative mode!!' % input
         else:
           # response = 'processed %s in starter mode' % input
-          response = "So, you %s %s" % (response_sentiment, movie_match)
+          response = "So, you %s %s. How about another movie?" % (response_sentiment, movie_match)
 
-      if len(self.userMovies) >= 5: #TODO: is this necessary?
-        self.recommend()
+      if len(self.userMovies) >= 5:
+        recommendations = self.recommend()
+        #TODO adding recommendations to response
+
       return response
 
 
     #############################################################################
     # 3. Movie Recommendation helper functions                                  #
     #############################################################################
+
+    def movie_name_to_id(self):
+      reader = csv.reader(file('data/movies.txt'), delimiter='%', quoting=csv.QUOTE_MINIMAL)
+      for line in reader:
+        # not necessary since we want to build movieList
+        # if len(userRatings) == len(u):
+        #   break
+        movieID, title, genres = int(line[0]), line[1], line[2]
+        if title[0] == '"' and title[-1] == '"':
+          title = title[1:-1]
+
+        self.movieDict[title] = movieID
+
+        # if title in u:
+        #   userRatings[movieID] = u[title]
+        # movieList.append(title)
 
     def read_data(self):
       """Reads the ratings matrix from file"""
@@ -185,9 +202,12 @@ class Chatbot:
       # movie i by user j
       self.titles, self.ratings = ratings() #TODO: do we need to add this to init()?
       reader = csv.reader(open('data/sentiment.txt', 'rb'))
+      # TODO: stem these sentiments
       # for sentiment in reader:
       #   self.sentiment[sentiment] = self.stemmer.stem(sentiment)
       self.sentiment = dict(reader)
+      self.binarize()
+
 
 
     def binarize(self):
@@ -232,7 +252,7 @@ class Chatbot:
 
 
 
-    def recommend(self, u):
+    def recommend(self, userRatings):
       """Generates a list of movies based on the input vector u using
       collaborative filtering"""
       # TODO: Implement a recommendation function that takes a user vector u
@@ -248,23 +268,10 @@ class Chatbot:
       # i.e. newA = dict(sorted(A.iteritems(), key=operator.itemgetter(1), reverse=True)[:5])
 
       estRatings = collections.defaultdict(lambda:0)
-      userRatings =  collections.defaultdict(lambda:0) 
 
       #TODO: [Need to test] First, need to transform movie(movieNames) to movieIdx
       #TODO(recommended): construct userMovies by movieIdx instead of movieName
       # This is adopted from movielens.py
-      reader = csv.reader(file('data/movies.txt'), delimiter='%', quoting=csv.QUOTE_MINIMAL)
-      movieList = []
-      for line in reader:
-        # not necessary since we want to build movieList
-        # if len(userRatings) == len(u):
-        #   break
-        movieID, title, genres = int(line[0]), line[1], line[2]
-        if title[0] == '"' and title[-1] == '"':
-          title = title[1:-1]
-        if title in u:
-          userRatings[movieID] = u[title]
-        movieList.append(title)
 
       for movieA in range(len(self.titles)):
         rating = 0
@@ -285,7 +292,9 @@ class Chatbot:
       max_keys = [k for k, v in estRatings.items() if v == max_value] # getting all keys containing the `maximum`
       recommendations = []
       for keys in max_keys:
+        movieName = movie 
         recommendations.append(movieList[keys])
+
       return recommendations
 
 
