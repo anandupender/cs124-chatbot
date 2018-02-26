@@ -81,7 +81,7 @@ class Chatbot:
         #let me hear another one
       """
 
-      regex_main = "([\w\s,']*)\"([\w\s()]*)\"([\w\s,']*)" #three capture groups
+      regex_main = "([\w\s,']*)\"([\w\s(),]*)\"([\w\s,']*)" #three capture groups
 
       movie_match = ""
       parsed_input = "" 
@@ -149,10 +149,10 @@ class Chatbot:
         # DETERMINE COUNTS FOR NEG AND POS WORDS
         if len(pos_words) > len(neg_words):
           response_sentiment = "liked"
-          self.userMovies[currMovieId] = "1"
+          self.userMovies[currMovieId] = 1
         elif len(neg_words) > len(pos_words):
           response_sentiment = "disliked"
-          self.userMovies[currMovieId] = "-1"
+          self.userMovies[currMovieId] = -1
         elif len(neg_words) == 0 and len(pos_words) == 0:
           print("neutral/no sentiment")
           response = "So how do you feel about %s." %movie_match
@@ -164,13 +164,18 @@ class Chatbot:
 
         if self.is_turbo == True:
           response = 'processed %s in creative mode!!' % input
+        # elif len(self.userMovies) >= 5:
+        elif len(self.userMovies) >= 1:
+          recommendations = self.recommend(self.userMovies)
+          #TODO adding recommendations to response:
+          # You liked "Titanic". Thank you! 
+          # That's enough for me to make a recommendation. 
+          # I suggest you watch "In the Heart of the Sea". 
+          # TODO: Would you like to hear another recommendation? (Or enter :quit if you're done.)
+          response = "You %s \"%s\". Thank you! \n That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (response_sentiment, movie_match, recommendations[0])
         else:
-          # response = 'processed %s in starter mode' % input
-          response = "So, you %s %s. How about another movie?" % (response_sentiment, movie_match)
+          response = "So, you %s \"%s\". How about another movie?" % (response_sentiment, movie_match)
 
-      if len(self.userMovies) >= 5:
-        recommendations = self.recommend()
-        #TODO adding recommendations to response
 
       return response
 
@@ -231,13 +236,13 @@ class Chatbot:
 
     def distance(self, u, v):
       """Calculates a given distance function between vectors u and v"""
-      # TODO: Implement the distance function between vectors u and v
+      # Implement the distance function between vectors u and v
       # Note: you can also think of this as computing a similarity measure
       # Method: cosine similarity
 
-      cosineSimilarity = 0
-      uNorm = 0
-      vNorm = 0
+      cosineSimilarity = 0.0
+      uNorm = 0.0
+      vNorm = 0.0
       for i in range(len(u)):
           cosineSimilarity += u[i] * v[i]
           uNorm += u[i] * u[i]
@@ -248,6 +253,10 @@ class Chatbot:
       vNorm = math.sqrt(vNorm)
       cosineSimilarity = cosineSimilarity / (uNorm * vNorm)
 
+      # TODO: check warning
+      #     /Users/kevinliao/Documents/CS124/Assignment6/cs124-chatbot/chatbot.py:254: RuntimeWarning: invalid value encountered in double_scalars
+      # cosineSimilarity = cosineSimilarity / (uNorm * vNorm)
+
       return cosineSimilarity
 
 
@@ -255,17 +264,9 @@ class Chatbot:
     def recommend(self, userRatings):
       """Generates a list of movies based on the input vector u using
       collaborative filtering"""
-      # TODO: Implement a recommendation function that takes a user vector u
+      # Implemented a recommendation function that takes a user vector u
       # and outputs a list of movies recommended by the chatbot
-      # Notes: input 'u' is actually self.userMovies (movieName, rating)
-      # 
-      # Pseudocode:
-      # N = set of items i rated by x (movie(or movieIdx?): rating)
-      # for each movie
-      #    calculate rating of movie i of user x
-      #    based on sim(i,j) and rating of user x on movie j
-      # find list of top 3(?) movie ratings and return that list
-      # i.e. newA = dict(sorted(A.iteritems(), key=operator.itemgetter(1), reverse=True)[:5])
+      # Notes: input 'u' is self.userMovies (movieID, rating)
 
       estRatings = collections.defaultdict(lambda:0)
 
@@ -274,7 +275,7 @@ class Chatbot:
       # This is adopted from movielens.py
 
       for movieA in range(len(self.titles)):
-        rating = 0
+        rating = 0.0
 
         #TODO: [Need to test] if movieA is in any movieB, don't recommend
         if movieA in userRatings:
@@ -292,8 +293,8 @@ class Chatbot:
       max_keys = [k for k, v in estRatings.items() if v == max_value] # getting all keys containing the `maximum`
       recommendations = []
       for keys in max_keys:
-        movieName = movie 
-        recommendations.append(movieList[keys])
+        movieName = [k for k, v in self.movieDict.items() if v == keys]
+        recommendations.append(movieName[0])
 
       return recommendations
 
