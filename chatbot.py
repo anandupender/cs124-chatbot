@@ -33,6 +33,13 @@ class Chatbot:
       self.model = CreateModel()
       self.negationWords = ["didn't","not","no","don't"]
       self.punctuation = {"but",",",".","!",":",";"}
+      self.strongPosVerbs = {"love","loved","adored","adore","enjoy","enjoyed"}
+      self.strongPosAdjectives = {"amazing","cool","awesome","favorite"}
+      self.strongNegVerbs = {"hate","hated","abhored","abhor","loathed","loathe","dispised","dispise"}
+      self.strongNegAdjectives = {"apalling"}
+      self.intensifiersSubject = {"really","reeally","extremely","absolutely"}
+      self.intensifiersObject = {"really","reeally","very","extremely","remarkably","unusually","utterly","absolutely","exceptionally"}
+
       self.userMovies = collections.defaultdict()
       self.movieDict = collections.defaultdict(lambda:0)
       self.movie_name_to_id()
@@ -85,31 +92,26 @@ class Chatbot:
 
       movie_match = ""
       parsed_input = "" 
-      response_sentiment = "" #word to describe movie sentiment by bot
       currMovieId = 0
 
       match = re.findall(regex_main, input)
-      print "match: {}".format(match)
+      # print "match: {}".format(match)
       if match == []:
         if len(self.userMovies) == 0:
-          response = "Please type a valid response. Movies should be in 'quotations'" #first time user doesn't know how to input text
-          return response
+          return "Please type a valid response. Movies should be in 'quotations'" #first time user doesn't know how to input text
         else:
-          response = "I want to hear about more movies!"    # edge case when user gets bored
-          return response
+          return "I want to hear about more movies!"    # edge case when user gets bored
       else:
         movie_match = match[0][1]
         if movie_match == "":
-          response = "Please type a movie within quotation marks"
-          return response
+          return "Please type a movie within quotation marks"
         parsed_input = match[0][0] + match[0][2]
 
         # Check if movie exists!
         if movie_match in self.movieDict:
           currMovieId = self.movieDict[movie_match]
         else:
-          response = "Sorry, but that movie is too hip for me! Can you tell me about another?"
-          return response
+          return "Sorry, but that movie is too hip for me! Can you tell me about another?"
 
         # FIND PUNCTUATION AND MAKE OWN WORD (ADD SPACE)
         for index,char in enumerate(parsed_input):
@@ -117,16 +119,35 @@ class Chatbot:
             parsed_input = parsed_input[:index] + " " + parsed_input[index:]
         parsed_input = parsed_input.split(" ")
         filter(None, parsed_input)
-        print parsed_input
 
         # EXTRACT SENTIMENT
         pos_words = []
         neg_words = []
 
+        #INITIALIZE RESPONSE VARIABLES
         negationTrigger = False   # triggers at neg words
+        objectTrigger = False     # triggers based on sentence strucutre (I really like star wars versus, star wars was really bad)
+        response_intensifier = ""
+        response_verb = ""
+        response_adjective = ""
+
         for word in parsed_input:
+
+          # INTENSIFIERS
+          if word in self.intensifiersSubject:
+            response_intensifier = word
+          if word in self. intensifiersObject:
+            response_intensifier  = word
+            objectTrigger = True
+
+          if word in self.strongPosAdjectives or word in self.strongNegAdjectives:
+            objectTrigger = True
+            response_adjective = word
+          if word in self.strongPosVerbs or word in self.strongNegVerbs:
+            response_verb = word
+
           word = self.stemmer.stem(word)
-          print word
+
           if word in self.sentiment:
             sentiment = self.sentiment[word]
 
@@ -147,32 +168,46 @@ class Chatbot:
             negationTrigger = False
 
         # DETERMINE COUNTS FOR NEG AND POS WORDS
-        if len(pos_words) > len(neg_words):
-          response_sentiment = "liked"
-          self.userMovies[currMovieId] = 1
-        elif len(neg_words) > len(pos_words):
-          response_sentiment = "disliked"
-          self.userMovies[currMovieId] = -1
-        elif len(neg_words) == 0 and len(pos_words) == 0:
-          print("neutral/no sentiment")
-          response = "So how do you feel about %s." %movie_match
-          return response
-        else:
-          print("confused sentiment")
-          response = "Sorry, I couldn't quite tell how you feel about %s. Can you tell me more about it?" %movie_match
-          return response
 
+        if len(neg_words) == len(pos_words) and response_adjective == "" and response_verb == "": # IF NO POS AND NEG (INCLUDING STRONG ONES WE HARD CODE)
+          return "So how do you really feel about %s." %movie_match
+        elif len(pos_words) > len(neg_words):
+          if response_adjective == "": 
+            response_adjective = "good"
+          if response_verb == "": 
+            response_verb = "liked"
+          self.userMovies[currMovieId] = 1
+        elif len(neg_words) > len(pos_words) and not objectTrigger:
+          if response_adjective == "": 
+            response_adjective = "bad"
+          if response_verb == "": 
+            response_verb = "disliked"
+          self.userMovies[currMovieId] = -1
+
+        # APPEND INTENSIFIER IN RESPONSE
+        if response_intensifier != "":
+          if objectTrigger:
+            response_adjective = response_intensifier + " " + response_adjective
+          else:
+            response_verb = response_intensifier + " " + response_verb
+
+
+        ############# RESPONSES #################
         if self.is_turbo == True:
           response = 'processed %s in creative mode!!' % input
-        # elif len(self.userMovies) >= 5:
-        elif len(self.userMovies) >= 1:
+        elif len(self.userMovies) >= 5:
           recommendations = self.recommend(self.userMovies)
-          # adding recommendations to response:
-          # TODO: Would you like to hear another recommendation? (Or enter :quit if you're done.)
-          response = "You %s \"%s\". Thank you! \n That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (response_sentiment, movie_match, recommendations[0])
-        else:
-          response = "So, you %s \"%s\". How about another movie?" % (response_sentiment, movie_match)
 
+          # TODO: Would you like to hear another recommendation? (Or enter :quit if you're done.)
+          if objectTrigger:
+            response = "You thought \"%s\" was %s. Thank you! \n That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (movie_match, response_adjective, recommendations[0])
+          else:
+            response = "You %s \"%s\". Thank you! \n That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (response_verb, movie_match, recommendations[0])
+        else:
+          if objectTrigger:
+            response = "So, you thought \"%s\" was %s. How about another movie?" % (movie_match, response_adjective)
+          else:
+            response = "So, you %s \"%s\". How about another movie?" % (response_verb, movie_match)
 
       return response
 
@@ -184,9 +219,6 @@ class Chatbot:
     def movie_name_to_id(self):
       reader = csv.reader(file('data/movies.txt'), delimiter='%', quoting=csv.QUOTE_MINIMAL)
       for line in reader:
-        # not necessary since we want to build movieList
-        # if len(userRatings) == len(u):
-        #   break
         movieID, title, genres = int(line[0]), line[1], line[2]
         if title[0] == '"' and title[-1] == '"':
           title = title[1:-1]
@@ -230,33 +262,6 @@ class Chatbot:
             self.ratings[row][col] = -1
 
 
-    # TODO - REMOVE, NO NEED TO HAVE THIS BECUASE SIMILARITY IS NP.DOT()
-    def distance(self, u, v):
-      """Calculates a given distance function between vectors u and v"""
-      # Implement the distance function between vectors u and v
-      # Note: you can also think of this as computing a similarity measure
-      # Method: cosine similarity
-
-      # cosineSimilarity = 0.0
-      # uNorm = 0.0
-      # vNorm = 0.0
-      # for i in range(len(u)):
-      #     cosineSimilarity += u[i] * v[i]
-          # uNorm += u[i] * u[i]
-          # vNorm += v[i] * v[i]
-      
-      # Normalize - NO NEED TO NORMALIZE
-      # uNorm = math.sqrt(uNorm)
-      # vNorm = math.sqrt(vNorm)
-      # cosineSimilarity = cosineSimilarity / (uNorm * vNorm)
-
-      # TODO: check warning
-      #     /Users/kevinliao/Documents/CS124/Assignment6/cs124-chatbot/chatbot.py:254: RuntimeWarning: invalid value encountered in double_scalars
-      # cosineSimilarity = cosineSimilarity / (uNorm * vNorm)
-
-      # return cosineSimilarity
-
-
     def recommend(self, userRatings):
       """Generates a list of movies based on the input vector u using
       collaborative filtering"""
@@ -265,8 +270,6 @@ class Chatbot:
       # Notes: input 'u' is self.userMovies (movieID, rating)
 
       estRatings = collections.defaultdict(lambda:0)
-
-      print "Starting For Loop"
 
       for movieA in range(len(self.titles)):
         rating = 0.0
@@ -281,7 +284,6 @@ class Chatbot:
           rating += similarity * userRating
 
         estRatings[movieA] = rating
-      print "Ending For Loop"
 
       #TODO: make sure recommendations is length of 3
       max_value = max(estRatings.values())
@@ -315,7 +317,9 @@ class Chatbot:
       Your task is to implement the chatbot as detailed in the PA6 instructions.
       Remember: in the starter mode, movie names will come in quotation marks and
       expressions of sentiment will be simple!
-      Write here the description for your own chatbot!
+      CREATIVE EXTENSIONS
+      1) Fine-Tune Sentiment - bot responds to certain strong words and intensifiers 
+      TODO: make this impact sentiment analysis? - non-binarize?
       """
     #############################################################################
     # Auxiliary methods for the chatbot.                                        #
