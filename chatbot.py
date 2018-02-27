@@ -36,6 +36,7 @@ class Chatbot:
       self.userMovies = collections.defaultdict()
       self.movieDict = collections.defaultdict(lambda:0)
       self.movie_name_to_id()
+      self.movie_history = []
 
     #############################################################################
     # 1. WARM UP REPL
@@ -81,7 +82,55 @@ class Chatbot:
         #let me hear another one
       """
 
-      regex_main = "([\w\s,']*)\"([\w\s(),\:\-\"\'\<\>\?\!\&]*)\"([\w\s,']*)" #three capture groups
+      # if self.turbo == True:
+      #   regex_multiple_movies = "([\w\s,']*)\"([\w\s(),\:\-\"\'\<\>\?\!\&]*)\"([\w\s,']*)(?:\"([\w\s(),\:\-\"\'\<\>\?\!\&]*)\"([\w\s,']*))*"
+      #   movie_matches = []
+      #   parsed_input = ""
+      #   response_sentiment = ""
+      #   match = re.findall(regex_main, input)
+
+      # if match == []:
+      #   if len(self.userMovies) == 0:
+      #     response = "Please type a valid response. Movies should be in 'quotations'" #first time user doesn't know how to input text
+      #     return response
+      #   else:
+      #     response = "I want to hear about more movies!"    # edge case when user gets bored
+      #     return response
+      # else:
+      #   for i, movie in enumerate(match):
+      #     movie_match.append(match[0][i*2 + 1])
+      #   for movie in movie_match:
+
+      #     #movie_match = match[0][1]
+      #     if movie == "":
+      #       response = "Please type a movie within quotation marks"
+      #       return response
+      #     parsed_input = match[0][0] + match[0][2]
+
+      #   # Check if movie exists!
+      #     if movie_match in self.movieDict:
+      #       currMovieId = self.movieDict[movie_match]
+      #     else:
+      #       response = "I could not find one of those movies"
+      #       return response
+
+      #   # FIND PUNCTUATION AND MAKE OWN WORD (ADD SPACE)
+      #     for index,char in enumerate(parsed_input):
+      #       if char in self.punctuation:
+      #         parsed_input = parsed_input[:index] + " " + parsed_input[index:]
+      #     parsed_input = parsed_input.split(" ")
+      #     filter(None, parsed_input)
+      #   else:
+
+      #save movie and sentiment
+      #it, that, 
+      #"any word" or it and that
+
+      #if self.turbo == True:
+      regex_main = "([\w\s,']*)(it|that|\"[()-.\w\s]*\")([\w\s,']*)"
+       
+
+      #regex_main = "([\w\s,']*)\"([\w\s(),\:\-\"\'\<\>\?\!\&]*)\"([\w\s,']*)" #three capture groups
 
       movie_match = ""
       parsed_input = "" 
@@ -98,11 +147,25 @@ class Chatbot:
           response = "I want to hear about more movies!"    # edge case when user gets bored
           return response
       else:
-        movie_match = match[0][1]
+        movie_match = match[0][1].replace('"', "")
         if movie_match == "":
           response = "Please type a movie within quotation marks"
           return response
         parsed_input = match[0][0] + match[0][2]
+
+        #CODE FOR REMEMBERING MOVIE INPUTS
+
+        if movie_match == "it" or movie_match == "that":
+          if len(self.movie_history) > 0:
+            movie_match = self.movie_history[len(self.movie_history) - 1]
+          else:
+            response = "I'm sorry, I don't know what \"%s\" is. Please input a movie!" %movie_match
+            return response
+
+        self.movie_history.append(movie_match)
+        #END CODE FOR REMEMBERING MOVIE INPUTS!
+
+
 
         # Check if movie exists!
         if movie_match in self.movieDict:
@@ -110,6 +173,8 @@ class Chatbot:
         else:
           response = "Sorry, but that movie is too hip for me! Can you tell me about another?"
           return response
+
+        
 
         # FIND PUNCTUATION AND MAKE OWN WORD (ADD SPACE)
         for index,char in enumerate(parsed_input):
@@ -126,7 +191,7 @@ class Chatbot:
         negationTrigger = False   # triggers at neg words
         for word in parsed_input:
           word = self.stemmer.stem(word)
-          print word
+          #print word
           if word in self.sentiment:
             sentiment = self.sentiment[word]
 
@@ -155,7 +220,7 @@ class Chatbot:
           self.userMovies[currMovieId] = -1
         elif len(neg_words) == 0 and len(pos_words) == 0:
           print("neutral/no sentiment")
-          response = "So how do you feel about %s." %movie_match
+          response = "So how do you feel about %s?" %movie_match
           return response
         else:
           print("confused sentiment")
@@ -165,7 +230,7 @@ class Chatbot:
         if self.is_turbo == True:
           response = 'processed %s in creative mode!!' % input
         # elif len(self.userMovies) >= 5:
-        elif len(self.userMovies) >= 1:
+        elif len(self.userMovies) >= 4:
           recommendations = self.recommend(self.userMovies)
           # adding recommendations to response:
           # TODO: Would you like to hear another recommendation? (Or enter :quit if you're done.)
@@ -173,6 +238,7 @@ class Chatbot:
         else:
           response = "So, you %s \"%s\". How about another movie?" % (response_sentiment, movie_match)
 
+        
 
       return response
 
