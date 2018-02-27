@@ -25,7 +25,7 @@ class Chatbot:
     # `moviebot` is the default chatbot. Change it to your chatbot's name       #
     #############################################################################
     def __init__(self, is_turbo=False):
-      self.name = 'moviebot'
+      self.name = 'Leroy'
       self.is_turbo = is_turbo
       self.stemmer = PorterStemmer()
       self.read_data()
@@ -45,7 +45,7 @@ class Chatbot:
       """chatbot greeting message"""
       # TODO: Write a short greeting message                                      #
 
-      greeting_message = 'How can I help you?'
+      greeting_message = "Hi I'm Leroy! I'm your movie best friend. Tell me some moviees you like or hate and I'll share some new ones you might like."
 
       return greeting_message
 
@@ -81,7 +81,7 @@ class Chatbot:
         #let me hear another one
       """
 
-      regex_main = "([\w\s,']*)\"([\w\s(),]*)\"([\w\s,']*)" #three capture groups
+      regex_main = "([\w\s,']*)\"([\w\s(),\:\-\"\'\<\>\?\!\&]*)\"([\w\s,']*)" #three capture groups
 
       movie_match = ""
       parsed_input = "" 
@@ -213,7 +213,6 @@ class Chatbot:
       self.binarize()
 
 
-
     def binarize(self):
       """Modifies the ratings matrix to make all of the ratings binary"""
 
@@ -230,34 +229,32 @@ class Chatbot:
           elif rating != 0:
             self.ratings[row][col] = -1
 
-      # pass
 
-
+    # TODO - REMOVE, NO NEED TO HAVE THIS BECUASE SIMILARITY IS NP.DOT()
     def distance(self, u, v):
       """Calculates a given distance function between vectors u and v"""
       # Implement the distance function between vectors u and v
       # Note: you can also think of this as computing a similarity measure
       # Method: cosine similarity
 
-      cosineSimilarity = 0.0
-      uNorm = 0.0
-      vNorm = 0.0
-      for i in range(len(u)):
-          cosineSimilarity += u[i] * v[i]
-          uNorm += u[i] * u[i]
-          vNorm += v[i] * v[i]
+      # cosineSimilarity = 0.0
+      # uNorm = 0.0
+      # vNorm = 0.0
+      # for i in range(len(u)):
+      #     cosineSimilarity += u[i] * v[i]
+          # uNorm += u[i] * u[i]
+          # vNorm += v[i] * v[i]
       
-      # Normalize
-      uNorm = math.sqrt(uNorm)
-      vNorm = math.sqrt(vNorm)
-      cosineSimilarity = cosineSimilarity / (uNorm * vNorm)
+      # Normalize - NO NEED TO NORMALIZE
+      # uNorm = math.sqrt(uNorm)
+      # vNorm = math.sqrt(vNorm)
+      # cosineSimilarity = cosineSimilarity / (uNorm * vNorm)
 
       # TODO: check warning
       #     /Users/kevinliao/Documents/CS124/Assignment6/cs124-chatbot/chatbot.py:254: RuntimeWarning: invalid value encountered in double_scalars
       # cosineSimilarity = cosineSimilarity / (uNorm * vNorm)
 
-      return cosineSimilarity
-
+      # return cosineSimilarity
 
 
     def recommend(self, userRatings):
@@ -269,6 +266,8 @@ class Chatbot:
 
       estRatings = collections.defaultdict(lambda:0)
 
+      print "Starting For Loop"
+
       for movieA in range(len(self.titles)):
         rating = 0.0
 
@@ -277,11 +276,12 @@ class Chatbot:
           continue
 
         for movieB in userRatings:
-          similarity = self.distance(self.ratings[movieA], self.ratings[movieB])
+          similarity = np.dot(self.ratings[movieA],self.ratings[movieB])
           userRating = userRatings[movieB]
           rating += similarity * userRating
 
         estRatings[movieA] = rating
+      print "Ending For Loop"
 
       #TODO: make sure recommendations is length of 3
       max_value = max(estRatings.values())
