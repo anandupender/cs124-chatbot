@@ -373,6 +373,7 @@ class Chatbot:
       1) Fine-Tune Sentiment - bot responds to certain strong words and intensifiers 
       TODO: make this impact sentiment analysis? - non-binarize?
       """
+      # TODO: update this when you are working on new creative extentions!!!
     #############################################################################
     # Auxiliary methods for the chatbot.                                        #
     #                                                                           #
