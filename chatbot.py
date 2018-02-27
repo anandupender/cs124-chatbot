@@ -42,6 +42,7 @@ class Chatbot:
 
       self.userMovies = collections.defaultdict()
       self.movieDict = collections.defaultdict(lambda:0)
+      self.movieNameList = []
       self.movie_name_to_id()
       self.movie_history = []
 
@@ -289,6 +290,7 @@ class Chatbot:
           title = title[1:-1]
 
         self.movieDict[title] = movieID
+        self.movieNameList.append(title)
 
     def read_data(self):
       """Reads the ratings matrix from file"""
@@ -350,13 +352,11 @@ class Chatbot:
 
         estRatings[movieA] = rating
 
-      #TODO: make sure recommendations is length of 3
-      max_value = max(estRatings.values())
-      max_keys = [k for k, v in estRatings.items() if v == max_value] # getting all keys containing the `maximum`
       recommendations = []
-      for keys in max_keys:
-        movieName = [k for k, v in self.movieDict.items() if v == keys]
-        recommendations.append(movieName[0])
+      recommendationCounter = collections.Counter(estRatings)
+      for movieID, rating in recommendationCounter.most_common(3):
+        recommendations.append(self.movieNameList[movieID]) #movieID happens to be same as index of movie in list
+      # print 'recommendation list: {}'.format(recommendations) #DEBUGGING INFO
 
       return recommendations
 
