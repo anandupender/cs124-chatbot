@@ -89,7 +89,7 @@ class Chatbot:
         # you _negaitve word_ movie
         #let me hear another one
       """
-
+      ########### Original starter mode implementation ############
       # if self.turbo == True:
       #   regex_multiple_movies = "([\w\s,']*)\"([\w\s(),\:\-\"\'\<\>\?\!\&]*)\"([\w\s,']*)(?:\"([\w\s(),\:\-\"\'\<\>\?\!\&]*)\"([\w\s,']*))*"
       #   movie_matches = []
@@ -136,8 +136,6 @@ class Chatbot:
 
       #if self.turbo == True:
       regex_main = "([\w\s,']*)(it|that|\"[()-.\w\s]*\")([\w\s,']*)"
-       
-
       #regex_main = "([\w\s,']*)\"([\w\s(),\:\-\"\'\<\>\?\!\&]*)\"([\w\s,']*)" #three capture groups
 
       movie_match = ""
@@ -145,7 +143,7 @@ class Chatbot:
       currMovieId = 0
 
       match = re.findall(regex_main, input)
-      # print "match: {}".format(match)
+      # print "match: {}".format(match) # DEBUGGING info
       if match == []:
         if len(self.userMovies) == 0:
           return "Please type a valid response. Movies should be in 'quotations'" #first time user doesn't know how to input text
@@ -169,15 +167,11 @@ class Chatbot:
         self.movie_history.append(movie_match)
         #END CODE FOR REMEMBERING MOVIE INPUTS!
 
-
-
-        # Check if movie exists!
+        # CHECK IF MOVIE EXISTS
         if movie_match in self.movieDict:
           currMovieId = self.movieDict[movie_match]
         else:
           return "Sorry, but that movie is too hip for me! Can you tell me about another?"
-
-        
 
         # FIND PUNCTUATION AND MAKE OWN WORD (ADD SPACE)
         for index,char in enumerate(parsed_input):
@@ -234,7 +228,6 @@ class Chatbot:
             negationTrigger = False
 
         # DETERMINE COUNTS FOR NEG AND POS WORDS
-
         if len(neg_words) == len(pos_words) and response_adjective == "" and response_verb == "": # IF NO POS AND NEG (INCLUDING STRONG ONES WE HARD CODE)
           return "So how do you really feel about %s." %movie_match
         elif len(pos_words) > len(neg_words):
@@ -307,8 +300,9 @@ class Chatbot:
         word = self.stemmer.stem(word)
         self.sentiment[word] = posNeg
       
+      # Original: not stemmed
       # reader = csv.reader(open('data/sentiment.txt', 'rb'))
-      # self.sentiment = dict(reader) #Original: not stemmed
+      # self.sentiment = dict(reader) 
       self.binarize()
 
 
@@ -337,29 +331,22 @@ class Chatbot:
       # Notes: input 'u' is self.userMovies (movieID, rating)
 
       estRatings = collections.defaultdict(lambda:0)
-
       for movieA in range(len(self.titles)):
         rating = 0.0
-
-        #if movieA is in any movieB, don't recommend
-        if movieA in userRatings:
+        if movieA in userRatings: # if movieA is in any movieB, don't recommend
           continue
-
         for movieB in userRatings:
           similarity = np.dot(self.ratings[movieA],self.ratings[movieB])
           userRating = userRatings[movieB]
           rating += similarity * userRating
-
         estRatings[movieA] = rating
 
       recommendations = []
       recommendationCounter = collections.Counter(estRatings)
       for movieID, rating in recommendationCounter.most_common(3):
-        recommendations.append(self.movieNameList[movieID]) #movieID happens to be same as index of movie in list
+        recommendations.append(self.movieNameList[movieID]) # Note: movieID happens to be same as index of movie in list
       # print 'recommendation list: {}'.format(recommendations) #DEBUGGING INFO
-
       return recommendations
-
 
 
     #############################################################################
