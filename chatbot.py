@@ -270,7 +270,7 @@ class Chatbot:
             response = "So, you %s \"%s\". " % (response_verb, movie_match)
           
           #START INQUIRING ABOUT THEIR MOVIE PREFERENCE GENRES
-          if len(self.userMovies) >= 2:
+          # if len(self.userMovies) >= 2:
 
           response += "How about another movie?"
       return response
