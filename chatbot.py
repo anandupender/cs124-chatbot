@@ -15,7 +15,6 @@ import numpy as np
 from movielens import ratings
 from random import randint
 from PorterStemmer import PorterStemmer
-from CreateModel import CreateModel
 import collections
 
 class Chatbot:
@@ -30,7 +29,6 @@ class Chatbot:
       self.stemmer = PorterStemmer()
       self.read_data()
       self.parsed_sentiment = dict()
-      self.model = CreateModel()
       self.negationWords = ["didn't","not","no","don't"]
       self.punctuation = {"but",",",".","!",":",";"}
       self.strongPosVerbs = {"love","loved","adored","adore","enjoy","enjoyed"}
