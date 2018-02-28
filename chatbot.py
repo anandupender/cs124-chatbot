@@ -42,6 +42,7 @@ class Chatbot:
 
       self.userMovies = collections.defaultdict()
       self.movieDict = collections.defaultdict(lambda:0)
+      self.genreDict = collections.defaultdict(lambda:0)
       self.movie_name_to_id()
       self.movie_history = []
 
@@ -157,7 +158,6 @@ class Chatbot:
         parsed_input = match[0][0] + match[0][2]
 
         #CODE FOR REMEMBERING MOVIE INPUTS
-
         if movie_match == "it" or movie_match == "that":
           if len(self.movie_history) > 0:
             movie_match = self.movie_history[len(self.movie_history) - 1]
@@ -169,14 +169,12 @@ class Chatbot:
         #END CODE FOR REMEMBERING MOVIE INPUTS!
 
 
-
         # Check if movie exists!
         if movie_match in self.movieDict:
           currMovieId = self.movieDict[movie_match]
         else:
-          return "Sorry, but that movie is too hip for me! Can you tell me about another?"
+          return "Sorry, but that movie is too hip for me! Can you tell me about another movie?"
 
-        
 
         # FIND PUNCTUATION AND MAKE OWN WORD (ADD SPACE)
         for index,char in enumerate(parsed_input):
@@ -270,10 +268,14 @@ class Chatbot:
             response = "You %s \"%s\". Thank you! \n That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (response_verb, movie_match, recommendations[0])
         else:
           if objectTrigger:
-            response = "So, you thought \"%s\" was %s. How about another movie?" % (movie_match, response_adjective)
+            response = "So, you thought \"%s\" was %s. " % (movie_match, response_adjective)
           else:
-            response = "So, you %s \"%s\". How about another movie?" % (response_verb, movie_match)
+            response = "So, you %s \"%s\". " % (response_verb, movie_match)
+          
+          #START INQUIRING ABOUT THEIR MOVIE PREFERENCE GENRES
+          if len(self.userMovies) >= 2:
 
+          response += "How about another movie?"
       return response
 
 
@@ -287,8 +289,9 @@ class Chatbot:
         movieID, title, genres = int(line[0]), line[1], line[2]
         if title[0] == '"' and title[-1] == '"':
           title = title[1:-1]
-
+        genres = genres.split("|")
         self.movieDict[title] = movieID
+        self.genreDict[title] = genres
 
     def read_data(self):
       """Reads the ratings matrix from file"""
