@@ -9,7 +9,6 @@ import csv
 import math
 import re
 import collections
-
 import numpy as np
 
 from movielens import ratings
@@ -40,16 +39,15 @@ class Chatbot:
       self.corrected_movie_trigger = False
 
       #For Two movie input
-
       self.similarity_words = {"either", "neither", "both", "and"}
       self.disimilarity_words = {"but"} #TODO: any more?
-
       #End Two Movie Input
 
       self.userMovies = collections.defaultdict()
+      self.userEmotions = [0,0,0,0,0] # anger, disgust, fear, joy, sadness
       self.movieDict = collections.defaultdict(lambda:0)
       self.genreDict = collections.defaultdict(lambda:0)
-      self.movieNameList = []
+      self.movieIDToName = collections.defaultdict(lambda:0)
       self.movie_name_to_id()
       self.movie_history = []
 
@@ -163,15 +161,13 @@ class Chatbot:
         #let me hear another one
       """
 
-
       #regex_main = "([\w\s,']*)(it|that|\"[()-.\w\s]*\")([\w\s,']*)" #For doing history/remembering
       if self.corrected_movie_trigger == False:
         regex_main = "([\w\s,']*)(it|that|It|That|\"[()-.\w\s]*\")([\w\s,']*)(?:\"([\w\s(),]*)\"([\w\s,']*))*" # includes BOTH two-movie feature AND remembering-history feature
       else:
         regex_main = "(no|No|yes|Yes)()()()" #FOR REPONSE TO MOVIE CORRECTION FEATURE, ONLY WNAT YES OR NO
-
-      #history doesn't really work for TWO movies, it only remembers first movie in the two
       #regex_main = "([\w\s,']*)\"([\w\s(),\:\-\"\'\<\>\?\!\&]*)\"([\w\s,']*)" #three capture groups
+
 
       movie_match = ""
       movie_match_2 = "" #second movie
@@ -183,7 +179,21 @@ class Chatbot:
 
       match = re.findall(regex_main, input)
       # print "match: {}".format(match) # DEBUGGING info
+
       if match == []:
+
+        # (CM6: Emotion detection)
+        parsed_input = self.parseInput(input)
+        currInputEmotion = [0,0,0,0,0]
+        for word in parsed_input:
+          if word in self.emotion:
+            for index, emotion in enumerate(self.emotion[word]):
+              if emotion == 1:      # if this word has this emotion
+                self.userEmotions[index] += 1
+                currInputEmotion[index] += 1
+        
+        return self.arbitraryInputHelper(parsed_input, currInputEmotion)
+
         if len(self.userMovies) == 0:
           return "Please type a valid response. Movies should be in 'quotations'" #first time user doesn't know how to input text
         else:
@@ -193,13 +203,9 @@ class Chatbot:
         movie_match_2 = match[0][3].replace('"', "") # adds second movie, might be NULL string if single movie
         parsed_input = match[0][0] + match[0][2]
 
-         # FIND PUNCTUATION AND MAKE OWN WORD (ADD SPACE)
-        for index,char in enumerate(parsed_input):
-          if char in self.punctuation:
-            parsed_input = parsed_input[:index] + " " + parsed_input[index:]
-        parsed_input = parsed_input.split(" ")
-        filter(None, parsed_input)
+        parsed_input = self.parseInput(parsed_input)
 
+        # CONFIRMING SPELL CHECK RECOMMENDATION
         if parsed_input[0] == "No" or parsed_input[0] == "no": #IF USER INPUTS NO FOR CONFIRMING MOVIE
           if self.corrected_movie_trigger == True:
             self.corrected_movie_trigger = False
@@ -211,6 +217,10 @@ class Chatbot:
         if movie_match == "" and self.corrected_movie_trigger == False:
           return "Please type a movie within quotation marks"
         
+        # CHECK IF MOVIE IS PRESENT + (CM5: Arbitrary input)
+        if movie_match == "":
+          # return "Please type a movie within quotation marks" # ORIGINAL
+          return self.arbitraryInputHelper(parsed_input)
 
         #CODE FOR REMEMBERING MOVIE INPUTS
         if movie_match == "it" or movie_match == "that" or movie_match == "It" or movie_match == "That": #if someone references it or that without a movie
@@ -220,17 +230,14 @@ class Chatbot:
             response = "I'm sorry, I don't know what \"%s\" is. Please input a movie!" %movie_match
             return response
 
-        
-
-        #END CODE FOR REMEMBERING MOVIE INPUTS!
-
 
         #CHECK IF MOVIES EXISTS 
         min_distance = 1000
         corrected_movie = ""
-
-
         if movie_match in self.movieDict:
+          for mID in self.userMovies:
+            if movie_match == self.movieIDToName[mID]:
+              return "Already got that! Please give me another movie!"
           currMovieId = self.movieDict[movie_match]
           self.movie_history.append(movie_match)
         else:
@@ -241,13 +248,11 @@ class Chatbot:
               min_distance = edit_distance
           self.corrected_movie_trigger = True
           self.movie_history.append(corrected_movie)
-          return "Sorry, did you mean \"%s\"?" %corrected_movie #ask for "best" movie
+          return "Sorry, did you mean \"%s\"? Please respond with yes or no." %corrected_movie #ask for "best" movie
           #return "Sorry, but that movie is too hip for me, or it might not exist! Can you tell me about another movie?"
         if movie_match_2 in self.movieDict: #checks if second movie exists
           currMovieId2 = self.movieDict[movie_match_2]
 
-
-       
 
         # EXTRACT SENTIMENT
         pos_words = []
@@ -269,7 +274,6 @@ class Chatbot:
         for word in parsed_input:
 
           # CHECKING FOR SIMILARITY WORDS WHEN TWO MOVIES EXIST
-
           if word in self.disimilarity_words:
             opposite_sentiment_trigger = True #if found words like "but"
           if word in self.similarity_words:
@@ -345,7 +349,6 @@ class Chatbot:
           self.userMovies[currMovieId] = -1
           print self.userMovies[currMovieId]
 
-
           #PART OF MULTIPLE MOVIE CODE
           if currMovieId2 != -1: # if there is a second movie
             if same_sentiment_trigger == True and opposite_sentiment_trigger == False: 
@@ -367,7 +370,6 @@ class Chatbot:
           else:
             response_verb = response_intensifier + " " + response_verb
 
-
         ############# RESPONSES #################
         if self.is_turbo == True:
           response = 'processed %s in creative mode!!' % input
@@ -376,11 +378,14 @@ class Chatbot:
             response = "So, you thought \"%s\" was %s " % (movie_match, response_adjective)
             if currMovieId2 != -1:
               response += "and  %s was \"%s\" " %(movie_match_2, response_adjective_2) #append if second movie exists
+            else:
+              response += "."
           else:
             response = "So, you %s \"%s\" " % (response_verb, movie_match)
             if currMovieId2 != -1:
               response += "and you %s \"%s\" " %(response_verb_2, movie_match_2) #append if second movie exists
-
+            else:
+              response += "."
 
           # CHECK FOR MORE MOVEIS NEEDED OR RECOMMENDATION MADE
           if len(self.userMovies) >= 4:
@@ -395,8 +400,20 @@ class Chatbot:
             response += "How about another movie?"
 
           #START INQUIRING ABOUT THEIR MOVIE PREFERENCE GENRES
-          # if len(self.userMovies) >= 2:
+          if len(self.userMovies) >= 2:
+            response += " How about another movie?"
+
       return response
+
+    def parseInput(self, myInput):
+       # FIND PUNCTUATION AND MAKE OWN WORD (ADD SPACE)
+      parsed_input = []
+      for index,char in enumerate(myInput):
+        if char in self.punctuation:
+          myInput = myInput[:index] + " " + myInput[index:]
+      parsed_input = myInput.split(" ")
+      filter(None, parsed_input)
+      return parsed_input
 
 
     #############################################################################
@@ -412,7 +429,7 @@ class Chatbot:
         genres = genres.split("|")
         self.movieDict[title] = movieID
         self.genreDict[title] = genres
-        self.movieNameList.append(title)
+        self.movieIDToName[movieID] = title
 
     def read_data(self):
       """Reads the ratings matrix from file"""
@@ -428,7 +445,15 @@ class Chatbot:
         word, posNeg = line[0], line[1]
         word = self.stemmer.stem(word)
         self.sentiment[word] = posNeg
-      
+
+      # CM6 - RESPOND TO EMOTION
+      self.emotion = collections.defaultdict(lambda:0)
+      emotionReader = csv.reader(file('data/emotions.txt'), delimiter=',', quoting=csv.QUOTE_MINIMAL)
+      for line in emotionReader:
+        currEmotion = line[0]
+        line = map(int, line[1:])
+        self.emotion[currEmotion] = line
+
       # Original: not stemmed
       # reader = csv.reader(open('data/sentiment.txt', 'rb'))
       # self.sentiment = dict(reader) 
@@ -473,9 +498,33 @@ class Chatbot:
       recommendations = []
       recommendationCounter = collections.Counter(estRatings)
       for movieID, rating in recommendationCounter.most_common(3):
-        recommendations.append(self.movieNameList[movieID]) # Note: movieID happens to be same as index of movie in list
+        recommendations.append(self.movieIDToName[movieID]) # Note: movieID happens to be same as index of movie in list
       # print 'recommendation list: {}'.format(recommendations) #DEBUGGING INFO
       return recommendations
+
+    # (CM5 Arbitrary input and CM? Identifying and responding to emotions)
+    def arbitraryInputHelper(self, rawInput, currInputEmotion):
+        # questionVocab
+        # if input[0] in questionVocab: #Question
+        if rawInput[0] == "Can":
+          return "Can you?"
+          
+        # anger, disgust, fear, joy, sadness
+        elif not all(v == 0 for v in currInputEmotion):  # FOUND EMOTION
+          # print rawInput
+          # print currInputEmotion
+          if currInputEmotion[0] == 1:
+            return "Don't get upset at me, I'm just the messenger."
+          elif currInputEmotion[1] == 1:
+            return "Wow you are really disgusted."
+          elif currInputEmotion[2] == 1:
+            return "Don't be scared! Everything will be ok."
+          elif currInputEmotion[3] == 1:
+            return "You getting happy makes me happy!"
+          elif currInputEmotion[4] == 1:
+            return "I am sorry you are sad. Want a tissue?"
+        else:
+          return "Please type a movie within quotation marks"
 
 
     #############################################################################
@@ -499,8 +548,23 @@ class Chatbot:
       Remember: in the starter mode, movie names will come in quotation marks and
       expressions of sentiment will be simple!
       CREATIVE EXTENSIONS
-      1) Fine-Tune Sentiment - bot responds to certain strong words and intensifiers 
+      1) Fine-Grained Sentiment - bot responds to certain strong words and intensifiers 
       TODO: make this impact sentiment analysis? - non-binarize?
+      2) Extracting sentiment with multiple-movie input (two movie)
+      3) Understanding references to things said previously
+      Note: this does not work for more than one movie
+      4) Check unique movie from user input
+      5) Responding to arbitrary input (implementing- kevin)
+      6) Identifying and Responding to Emotion
+
+      List of TODOs:
+      - Edge case: after recommendation, what chatbot should do
+      - Speaking Fluently
+      - Spell-checking movie titles
+      - Identifying and responding to emotions
+      - Identifying movies without quotation marks or perfect capitalization
+      - Using non-binarized dataset
+      - Alternate/foreign titles
       """
       # TODO: update this when you are working on new creative extentions!!!
     #############################################################################
