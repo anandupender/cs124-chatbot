@@ -36,6 +36,7 @@ class Chatbot:
       self.strongNegAdjectives = {"apalling"}
       self.intensifiersSubject = {"really","reeally","extremely","absolutely"}
       self.intensifiersObject = {"really","reeally","very","extremely","remarkably","unusually","utterly","absolutely","exceptionally"}
+      self.corrected_movie_trigger = False
 
       #For Two movie input
       self.similarity_words = {"either", "neither", "both", "and"}
@@ -43,6 +44,7 @@ class Chatbot:
       #End Two Movie Input
 
       self.userMovies = collections.defaultdict()
+      self.userEmotions = [0,0,0,0,0] # anger, disgust, fear, joy, sadness
       self.movieDict = collections.defaultdict(lambda:0)
       self.genreDict = collections.defaultdict(lambda:0)
       self.movieIDToName = collections.defaultdict(lambda:0)
@@ -80,6 +82,72 @@ class Chatbot:
     # 2. Modules 2 and 3: extraction and transformation                         #
     #############################################################################
 
+    def LD(self, s, t, costs=(1, 1, 1)):
+      """ 
+          iterative_levenshtein(s, t) -> ldist
+          ldist is the Levenshtein distance between the strings 
+          s and t.
+          For all i and j, dist[i,j] will contain the Levenshtein 
+          distance between the first i characters of s and the 
+          first j characters of t
+          
+          costs: a tuple or a list with three integers (d, i, s)
+                 where d defines the costs for a deletion
+                       i defines the costs for an insertion and
+                       s defines the costs for a substitution
+      """
+      rows = len(s)+1
+      cols = len(t)+1
+      deletes, inserts, substitutes = costs
+      
+      dist = [[0 for x in range(cols)] for x in range(rows)]
+      # source prefixes can be transformed into empty strings 
+      # by deletions:
+      for row in range(1, rows):
+          dist[row][0] = row * deletes
+      # target prefixes can be created from an empty source string
+      # by inserting the characters
+      for col in range(1, cols):
+          dist[0][col] = col * inserts
+          
+      for col in range(1, cols):
+          for row in range(1, rows):
+              if s[row-1] == t[col-1]:
+                  cost = 0
+              else:
+                  cost = substitutes
+              dist[row][col] = min(dist[row-1][col] + deletes,
+                                   dist[row][col-1] + inserts,
+                                   dist[row-1][col-1] + cost) # substitution
+      #for r in range(rows):
+          #print(dist[r])
+      
+   
+      return dist[row][col]
+  # default:
+  #print(iterative_levenshtein("abc", "xyz"))
+  # the costs for substitions are twice as high as inserts and delets:
+  #print(iterative_levenshtein("abc", "xyz", costs=(1, 1, 2)))
+  # inserts and deletes are twice as high as substitutes
+  #print(iterative_levenshtein("abc", "xyz", costs=(2, 2, 1)))
+  #print(iterative_levenshtein("flaw", "lawn"))
+
+    # def LD(self, s, t):
+    #   if s == "":
+    #     return len(t)
+    #   if t == "":
+    #     return len(s)
+    #   if s[-1] == t[-1]:
+    #     cost = 0
+    #   else:
+    #     cost = 1
+       
+    #   res = min([self.LD(s[:-1], t)+1,
+    #            self.LD(s, t[:-1])+1, 
+    #            self.LD(s[:-1], t[:-1]) + cost])
+    #   return res
+#print(LD("Python", "Peithen"))
+
     def process(self, input):
       """Takes the input string from the REPL and call delegated functions
       that
@@ -93,7 +161,13 @@ class Chatbot:
         #let me hear another one
       """
 
-      regex_main = "([\w\s,']*)(it|that|It|That|\"[()-.\w\s]*\")([\w\s,']*)(?:\"([\w\s(),]*)\"([\w\s,']*))*" # includes BOTH two-movie feature AND remembering-history feature
+      #regex_main = "([\w\s,']*)(it|that|\"[()-.\w\s]*\")([\w\s,']*)" #For doing history/remembering
+      if self.corrected_movie_trigger == False:
+        regex_main = "([\w\s,']*)(it|that|It|That|\"[()-.\w\s]*\")([\w\s,']*)(?:\"([\w\s(),]*)\"([\w\s,']*))*" # includes BOTH two-movie feature AND remembering-history feature
+      else:
+        regex_main = "(no|No|yes|Yes)()()()" #FOR REPONSE TO MOVIE CORRECTION FEATURE, ONLY WNAT YES OR NO
+      #regex_main = "([\w\s,']*)\"([\w\s(),\:\-\"\'\<\>\?\!\&]*)\"([\w\s,']*)" #three capture groups
+
 
       movie_match = ""
       movie_match_2 = "" #second movie
@@ -102,9 +176,24 @@ class Chatbot:
       currMovieId = -1
       currMovieId2 = -1 #same method for dealing with a second movie
 
+
       match = re.findall(regex_main, input)
       # print "match: {}".format(match) # DEBUGGING info
+
       if match == []:
+
+        # (CM6: Emotion detection)
+        parsed_input = self.parseInput(input)
+        currInputEmotion = [0,0,0,0,0]
+        for word in parsed_input:
+          if word in self.emotion:
+            for index, emotion in enumerate(self.emotion[word]):
+              if emotion == 1:      # if this word has this emotion
+                self.userEmotions[index] += 1
+                currInputEmotion[index] += 1
+        
+        return self.arbitraryInputHelper(parsed_input, currInputEmotion)
+
         if len(self.userMovies) == 0:
           return "Please type a valid response. Movies should be in 'quotations'" #first time user doesn't know how to input text
         else:
@@ -114,43 +203,60 @@ class Chatbot:
         movie_match_2 = match[0][3].replace('"', "") # adds second movie, might be NULL string if single movie
         parsed_input = match[0][0] + match[0][2]
 
-        # FIND PUNCTUATION AND MAKE OWN WORD (ADD SPACE)
-        for index,char in enumerate(parsed_input):
-          if char in self.punctuation:
-            parsed_input = parsed_input[:index] + " " + parsed_input[index:]
-        parsed_input = parsed_input.split(" ")
-        filter(None, parsed_input)
+        parsed_input = self.parseInput(parsed_input)
 
-        # (CM6: Emotion detection)
-
+        # CONFIRMING SPELL CHECK RECOMMENDATION
+        if parsed_input[0] == "No" or parsed_input[0] == "no": #IF USER INPUTS NO FOR CONFIRMING MOVIE
+          if self.corrected_movie_trigger == True:
+            self.corrected_movie_trigger = False
+            return "Hmmm... okay then. Can you retype the movie or talk about another one?"
+        elif parsed_input[0] == "Yes" or parsed_input[0] == "yes": #IF USER INPUTS YES FOR CONFIRMING MOVIE
+          if self.corrected_movie_trigger == True:
+            self.corrected_movie_trigger = False
+            movie_match = self.movie_history[len(self.movie_history) - 1]
+        if movie_match == "" and self.corrected_movie_trigger == False:
+          return "Please type a movie within quotation marks"
+        
         # CHECK IF MOVIE IS PRESENT + (CM5: Arbitrary input)
         if movie_match == "":
           # return "Please type a movie within quotation marks" # ORIGINAL
           return self.arbitraryInputHelper(parsed_input)
 
         #CODE FOR REMEMBERING MOVIE INPUTS
-        if movie_match == "it" or movie_match == "that": #if someone references it or that without a movie
+        if movie_match == "it" or movie_match == "that" or movie_match == "It" or movie_match == "That": #if someone references it or that without a movie
           if len(self.movie_history) > 0:
             movie_match = self.movie_history[len(self.movie_history) - 1]
           else:
             response = "I'm sorry, I don't know what \"%s\" is. Please input a movie!" %movie_match
             return response
 
-        self.movie_history.append(movie_match)
 
-        #END CODE FOR REMEMBERING MOVIE INPUTS!
-
-        #CHECK IF MOVIES EXISTS & IS NEW MOVIE FROM USER
+        #CHECK IF MOVIES EXISTS 
+        min_distance = 1000
+        corrected_movie = ""
         if movie_match in self.movieDict:
           for mID in self.userMovies:
             if movie_match == self.movieIDToName[mID]:
               return "Already got that! Please give me another movie!"
           currMovieId = self.movieDict[movie_match]
+          self.movie_history.append(movie_match)
         else:
-          return "Sorry, but that movie is too hip for me, or it might not exist! Can you tell me about another movie?"
+          for movie in self.movieDict:
+            edit_distance = self.LD(movie, movie_match) # check for smallest edit distance
+            if edit_distance < min_distance:
+              corrected_movie = movie
+              min_distance = edit_distance
+          self.corrected_movie_trigger = True
+          self.movie_history.append(corrected_movie)
+          return "Sorry, did you mean \"%s\"? Please respond with yes or no." %corrected_movie #ask for "best" movie
+          #return "Sorry, but that movie is too hip for me, or it might not exist! Can you tell me about another movie?"
         if movie_match_2 in self.movieDict: #checks if second movie exists
-          currMovieId2 = self.movieDict[movie_match_2] 
+          currMovieId2 = self.movieDict[movie_match_2]
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> ef24f793580093c20ba8faf42ddd30cb51f3fca5
         # EXTRACT SENTIMENT
         pos_words = []
         neg_words = []
@@ -246,7 +352,6 @@ class Chatbot:
           self.userMovies[currMovieId] = -1
           print self.userMovies[currMovieId]
 
-
           #PART OF MULTIPLE MOVIE CODE
           if currMovieId2 != -1: # if there is a second movie
             if same_sentiment_trigger == True and opposite_sentiment_trigger == False: 
@@ -268,7 +373,6 @@ class Chatbot:
           else:
             response_verb = response_intensifier + " " + response_verb
 
-
         ############# RESPONSES #################
         if self.is_turbo == True:
           response = 'processed %s in creative mode!!' % input
@@ -286,7 +390,6 @@ class Chatbot:
             else:
               response += "."
 
-
           # CHECK FOR MORE MOVEIS NEEDED OR RECOMMENDATION MADE
           if len(self.userMovies) >= 4:
             recommendations = self.recommend(self.userMovies)
@@ -301,9 +404,19 @@ class Chatbot:
 
           #START INQUIRING ABOUT THEIR MOVIE PREFERENCE GENRES
           if len(self.userMovies) >= 2:
-            response += "How about another movie?"
+            response += " How about another movie?"
 
       return response
+
+    def parseInput(self, myInput):
+       # FIND PUNCTUATION AND MAKE OWN WORD (ADD SPACE)
+      parsed_input = []
+      for index,char in enumerate(myInput):
+        if char in self.punctuation:
+          myInput = myInput[:index] + " " + myInput[index:]
+      parsed_input = myInput.split(" ")
+      filter(None, parsed_input)
+      return parsed_input
 
 
     #############################################################################
@@ -393,7 +506,7 @@ class Chatbot:
       return recommendations
 
     # (CM5 Arbitrary input and CM? Identifying and responding to emotions)
-    def arbitraryInputHelper(self, rawInput):
+    def arbitraryInputHelper(self, rawInput, currInputEmotion):
       userInput = rawInput.split(' ')
       userInputLowerCase = rawInput.lower().split(' ')
 
@@ -415,8 +528,20 @@ class Chatbot:
       elif userInputLowerCase[0] == "how":
         return "I don't know how " + ' '.join(rawResponse[2:]) + rawResponse[1]
 
-      
-      # elif ():  # TODO(anand): emotions ('I feel sad')
+      # anger, disgust, fear, joy, sadness
+      elif not all(v == 0 for v in currInputEmotion):  # FOUND EMOTION
+        # print rawInput
+        # print currInputEmotion
+        if currInputEmotion[0] == 1:
+          return "Don't get upset at me, I'm just the messenger."
+        elif currInputEmotion[1] == 1:
+          return "Wow you are really disgusted."
+        elif currInputEmotion[2] == 1:
+          return "Don't be scared! Everything will be ok."
+        elif currInputEmotion[3] == 1:
+          return "You getting happy makes me happy!"
+        elif currInputEmotion[4] == 1:
+          return "I am sorry you are sad. Want a tissue?"
 
       else:
         return "Please type a movie within quotation marks"

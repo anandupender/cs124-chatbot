@@ -2552,6 +2552,7 @@ ruthless,1,1,1,0,0
 saber,1,0,1,0,0
 sabotage,1,1,1,0,1
 sacrifices,0,1,1,0,1
+sad,0,0,0,0,1
 sadly,0,0,0,0,1
 sadness,0,0,0,0,1
 safe,0,0,0,1,0
