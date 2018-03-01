@@ -114,6 +114,13 @@ class Chatbot:
         movie_match_2 = match[0][3].replace('"', "") # adds second movie, might be NULL string if single movie
         parsed_input = match[0][0] + match[0][2]
 
+        # FIND PUNCTUATION AND MAKE OWN WORD (ADD SPACE)
+        for index,char in enumerate(parsed_input):
+          if char in self.punctuation:
+            parsed_input = parsed_input[:index] + " " + parsed_input[index:]
+        parsed_input = parsed_input.split(" ")
+        filter(None, parsed_input)
+
         # (CM6: Emotion detection)
 
         # CHECK IF MOVIE IS PRESENT + (CM5: Arbitrary input)
@@ -143,14 +150,6 @@ class Chatbot:
           return "Sorry, but that movie is too hip for me, or it might not exist! Can you tell me about another movie?"
         if movie_match_2 in self.movieDict: #checks if second movie exists
           currMovieId2 = self.movieDict[movie_match_2] 
-
-
-        # FIND PUNCTUATION AND MAKE OWN WORD (ADD SPACE)
-        for index,char in enumerate(parsed_input):
-          if char in self.punctuation:
-            parsed_input = parsed_input[:index] + " " + parsed_input[index:]
-        parsed_input = parsed_input.split(" ")
-        filter(None, parsed_input)
 
         # EXTRACT SENTIMENT
         pos_words = []
@@ -393,19 +392,56 @@ class Chatbot:
       # print 'recommendation list: {}'.format(recommendations) #DEBUGGING INFO
       return recommendations
 
-      # (CM5 Arbitrary input and CM? Identifying and responding to emotions)
-      def arbitraryInputHelper(self, input)
-        # questionVocab
-        # if input[0] in questionVocab: #Question
-        if input[0] == "Can":
-          return "Can you?"
+    # (CM5 Arbitrary input and CM? Identifying and responding to emotions)
+    def arbitraryInputHelper(self, rawInput):
+      userInput = rawInput.split(' ')
+      userInputLowerCase = rawInput.lower().split(' ')
+
+      rawResponse = self.reverseSubject(userInput)
+      if userInputLowerCase[0] == "can" and userInputLowerCase[1] == "i":
+        return "I don't know if you can " + ' '.join(rawResponse[2:])
+      elif userInputLowerCase[0] == "can" and userInputLowerCase[1] == "you":
+        return "I don't know if I can " + ' '.join(rawResponse[2:])
+      elif userInputLowerCase[0] == "who":
+        return "I don't know who " + ' '.join(rawResponse[2:]) + rawResponse[1]
+      elif userInputLowerCase[0] == "what":
+        return "I don't know what " + ' '.join(rawResponse[2:]) + rawResponse[1]
+      elif userInputLowerCase[0] == "where":
+        return "I don't know where " + ' '.join(rawResponse[2:]) + rawResponse[1]
+      elif userInputLowerCase[0] == "when":
+        return "I don't know when " + ' '.join(rawResponse[2:]) + rawResponse[1]
+      elif userInputLowerCase[0] == "why":
+        return "I don't know why " + ' '.join(rawResponse[2:]) + rawResponse[1]
+      elif userInputLowerCase[0] == "how":
+        return "I don't know how " + ' '.join(rawResponse[2:]) + rawResponse[1]
+
+      
+      # elif ():  # TODO(anand): emotions ('I feel sad')
+
+      else:
+        return "Please type a movie within quotation marks"
+
+    def reverseSubject(self, userInput):
+      rawResponse = []
+      prev = ""
+      for idx in len(userInput):
+        word = userInput[idx]
+        if word == 'i' or word == 'I':
+          rawResponse.append('you')
           
-
-
-        # elif ():  # TODO(anand): emotions ('I feel sad')
-
+            
+        elif word == 'you':
+          if idx == len(userInput)-1:
+            rawResponse.append('me')
+          else:
+            rawResponse.append('I')
+            if prev == 'are':
+              rawResponse[idx-1] = 'am'
         else:
-          return "Please type a movie within quotation marks"
+          rawResponse.append(word)
+        prev = word
+      return rawResponse
+        
 
 
     #############################################################################
