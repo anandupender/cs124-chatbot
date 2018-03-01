@@ -14,6 +14,7 @@ import numpy as np
 from movielens import ratings
 from random import randint
 from PorterStemmer import PorterStemmer
+from random import randint
 import collections
 
 class Chatbot:
@@ -253,10 +254,6 @@ class Chatbot:
         if movie_match_2 in self.movieDict: #checks if second movie exists
           currMovieId2 = self.movieDict[movie_match_2]
 
-<<<<<<< HEAD
-=======
-
->>>>>>> ef24f793580093c20ba8faf42ddd30cb51f3fca5
         # EXTRACT SENTIMENT
         pos_words = []
         neg_words = []
@@ -378,17 +375,20 @@ class Chatbot:
           response = 'processed %s in creative mode!!' % input
         else:
           if objectTrigger:
-            response = "So, you thought \"%s\" was %s " % (movie_match, response_adjective)
+            response = "So, you thought \"%s\" was %s" % (movie_match, response_adjective)
             if currMovieId2 != -1:
-              response += "and  %s was \"%s\" " %(movie_match_2, response_adjective_2) #append if second movie exists
+              response += " and  %s was \"%s\"" %(movie_match_2, response_adjective_2) #append if second movie exists
             else:
               response += "."
           else:
-            response = "So, you %s \"%s\" " % (response_verb, movie_match)
+            response = "So, you %s \"%s\"" % (response_verb, movie_match)
             if currMovieId2 != -1:
-              response += "and you %s \"%s\" " %(response_verb_2, movie_match_2) #append if second movie exists
+              response += " and you %s \"%s\"" %(response_verb_2, movie_match_2) #append if second movie exists
             else:
               response += "."
+
+          #START INQUIRING ABOUT THEIR MOVIE PREFERENCE GENRES
+          response += self.genrePatternHelper()
 
           # CHECK FOR MORE MOVEIS NEEDED OR RECOMMENDATION MADE
           if len(self.userMovies) >= 4:
@@ -396,14 +396,11 @@ class Chatbot:
 
             # TODO: Would you like to hear another recommendation? (Or enter :quit if you're done.)
             if objectTrigger:
-              response += "Thank you! \n That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (recommendations[0])
+              response += " Thank you! \n That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (recommendations[0])
             else:
-              response += "Thank you! \n That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (recommendations[0])
+              response += " Thank you! \n That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (recommendations[0])
+          
           else:
-            response += "How about another movie?"
-
-          #START INQUIRING ABOUT THEIR MOVIE PREFERENCE GENRES
-          if len(self.userMovies) >= 2:
             response += " How about another movie?"
 
       return response
@@ -507,44 +504,52 @@ class Chatbot:
 
     # (CM5 Arbitrary input and CM? Identifying and responding to emotions)
     def arbitraryInputHelper(self, rawInput, currInputEmotion):
-      userInput = rawInput.split(' ')
-      userInputLowerCase = rawInput.lower().split(' ')
 
-      rawResponse = self.reverseSubject(userInput)
-      if userInputLowerCase[0] == "can" and userInputLowerCase[1] == "i":
-        return "I don't know if you can " + ' '.join(rawResponse[2:])
-      elif userInputLowerCase[0] == "can" and userInputLowerCase[1] == "you":
-        return "I don't know if I can " + ' '.join(rawResponse[2:])
-      elif userInputLowerCase[0] == "who":
-        return "I don't know who " + ' '.join(rawResponse[2:]) + rawResponse[1]
-      elif userInputLowerCase[0] == "what":
-        return "I don't know what " + ' '.join(rawResponse[2:]) + rawResponse[1]
-      elif userInputLowerCase[0] == "where":
-        return "I don't know where " + ' '.join(rawResponse[2:]) + rawResponse[1]
-      elif userInputLowerCase[0] == "when":
-        return "I don't know when " + ' '.join(rawResponse[2:]) + rawResponse[1]
-      elif userInputLowerCase[0] == "why":
-        return "I don't know why " + ' '.join(rawResponse[2:]) + rawResponse[1]
-      elif userInputLowerCase[0] == "how":
-        return "I don't know how " + ' '.join(rawResponse[2:]) + rawResponse[1]
+      # ANAND COMMENT OUT FOR NOW BECAUSE NOT WORKING WITH ALREADY PARSED STRING
+      # userInput = rawInput.split(' ')
+      # userInputLowerCase = rawInput.lower().split(' ')
+
+      # rawResponse = self.reverseSubject(userInput)
+      # if userInputLowerCase[0] == "can" and userInputLowerCase[1] == "i":
+      #   return "I don't know if you can " + ' '.join(rawResponse[2:])
+      # elif userInputLowerCase[0] == "can" and userInputLowerCase[1] == "you":
+      #   return "I don't know if I can " + ' '.join(rawResponse[2:])
+      # elif userInputLowerCase[0] == "who":
+      #   return "I don't know who " + ' '.join(rawResponse[2:]) + rawResponse[1]
+      # elif userInputLowerCase[0] == "what":
+      #   return "I don't know what " + ' '.join(rawResponse[2:]) + rawResponse[1]
+      # elif userInputLowerCase[0] == "where":
+      #   return "I don't know where " + ' '.join(rawResponse[2:]) + rawResponse[1]
+      # elif userInputLowerCase[0] == "when":
+      #   return "I don't know when " + ' '.join(rawResponse[2:]) + rawResponse[1]
+      # elif userInputLowerCase[0] == "why":
+      #   return "I don't know why " + ' '.join(rawResponse[2:]) + rawResponse[1]
+      # elif userInputLowerCase[0] == "how":
+      #   return "I don't know how " + ' '.join(rawResponse[2:]) + rawResponse[1]
 
       # anger, disgust, fear, joy, sadness
-      elif not all(v == 0 for v in currInputEmotion):  # FOUND EMOTION
-        # print rawInput
-        # print currInputEmotion
+      random = randint(0, 3)
+      angryResponses = ["Don't get upset at me, I'm just the messenger.","I'm sorry, this is a frowny-face-free zone","If I could get mad at you I would.","Don't raise your voice at me!"]
+      disgustedResponses = ["Wow don't get that grossed out", "That was uncalled for","Ok...not sure how to react to that.","Wow don't get that grossed out"]
+      fearResponses = ["Don't be scared! Everything will be ok.","Well now I'm scared too!","It's just a movie, don't be scared!", "I'm your friend, don't get scared."]
+      happyResponses = ["You getting happy makes me happy!","I love your enthusiasm!","Woah there, don't get too excited...","Glad, you're happy...I'm for sure not."]
+      sadResponses = ["I am sorry you are sad. Want a tissue?","Build a bridge and get over it.","Know what tears are? Water? Know what computers don't like? You guessed it!","Know what tears are? Water? Know what computers don't like? You guessed it!"]
+      defaultResponses = ["Hmm, not sure I get your point","Wait what, say that again.","Yea...I'm not following","We're not on the same page right now."]
+      if not all(v == 0 for v in currInputEmotion):  # FOUND EMOTION
+
         if currInputEmotion[0] == 1:
-          return "Don't get upset at me, I'm just the messenger."
+          return angryResponses[random]
         elif currInputEmotion[1] == 1:
-          return "Wow you are really disgusted."
+          return disgustedResponses[random]
         elif currInputEmotion[2] == 1:
-          return "Don't be scared! Everything will be ok."
+          return fearResponses[random]
         elif currInputEmotion[3] == 1:
-          return "You getting happy makes me happy!"
+          return happyResponses[random]
         elif currInputEmotion[4] == 1:
-          return "I am sorry you are sad. Want a tissue?"
+          return sadResponses[random]
 
       else:
-        return "Please type a movie within quotation marks"
+        return defaultResponses[random] + " Are you sure we are still talking about movies?"
 
     def reverseSubject(self, userInput):
       rawResponse = []
@@ -566,6 +571,31 @@ class Chatbot:
           rawResponse.append(word)
         prev = word
       return rawResponse
+
+    def genrePatternHelper(self):
+      userGenresPos = collections.defaultdict(lambda:0)
+      userGenresNeg = collections.defaultdict(lambda:0)
+      mostPopGenre = ""
+      leastPopGenre = ""
+
+      for movie in self.userMovies:
+        for genre in self.genreDict[self.movieIDToName[movie]]:
+          if self.userMovies[movie] == 1: #they like the movie
+            userGenresPos[genre] += 1
+          elif self.userMovies[movie] == -1: #they like the movie
+            userGenresNeg[genre] += 1
+
+      if userGenresPos: # make sure not empty
+        mostPopGenre = max(userGenresPos, key=userGenresPos.get)
+      if userGenresNeg: # make sure not empty
+        leastPopGenre = max(userGenresNeg, key=userGenresNeg.get)
+
+      if userGenresPos and userGenresPos[mostPopGenre] >= userGenresNeg[leastPopGenre] and userGenresPos[mostPopGenre] >= 2: #they had more of a fave than least fave
+        return " I didn't know you love %s...interesting!" % mostPopGenre
+      elif userGenresNeg and userGenresNeg[leastPopGenre] > userGenresPos[mostPopGenre] and userGenresNeg[leastPopGenre] >= 2: #they had more of a least fave than fave
+        return " I'm not a fan of %s movies either." % mostPopGenre
+
+      return ""
         
 
 
@@ -597,16 +627,18 @@ class Chatbot:
       Note: this does not work for more than one movie
       4) Check unique movie from user input
       5) Responding to arbitrary input (implementing- kevin)
-      6) Identifying and Responding to Emotion
+      6) Identifying and Responding to Emotion (bot is great at identifying sadness, fear, anger, joy, and disgust but sometimes has a hard time differentiating amongst similar ones)
+
+      EXTRA FEATURES:
+      1) As a user start telling Leroy about movies they like, he can pick up on their favorite or least favorite genres and let the user know. (must be at least 2 similar movie genres)
+      2) If a user omits a year in the movie, Leroy will correct them and make sure it's the right one
+      3) User can get up to XXXX movie recommendations
 
       List of TODOs:
       - Edge case: after recommendation, what chatbot should do
       - Speaking Fluently
-      - Spell-checking movie titles
-      - Identifying and responding to emotions
       - Identifying movies without quotation marks or perfect capitalization
       - Using non-binarized dataset
-      - Alternate/foreign titles
       """
       # TODO: update this when you are working on new creative extentions!!!
     #############################################################################

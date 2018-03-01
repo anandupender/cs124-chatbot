@@ -2588,6 +2588,7 @@ scarce,0,0,1,0,1
 scarcely,0,0,0,0,1
 scarcity,1,0,1,0,1
 scare,1,0,1,0,0
+scared,0,0,1,0,0
 scarecrow,0,0,1,0,0
 schism,1,0,0,0,0
 schizophrenia,1,1,1,0,1
