@@ -9,7 +9,6 @@ import csv
 import math
 import re
 import collections
-
 import numpy as np
 
 from movielens import ratings
@@ -39,10 +38,8 @@ class Chatbot:
       self.intensifiersObject = {"really","reeally","very","extremely","remarkably","unusually","utterly","absolutely","exceptionally"}
 
       #For Two movie input
-
       self.similarity_words = {"either", "neither", "both", "and"}
       self.disimilarity_words = {"but"} #TODO: any more?
-
       #End Two Movie Input
 
       self.userMovies = collections.defaultdict()
@@ -96,13 +93,7 @@ class Chatbot:
         #let me hear another one
       """
 
-
-      #regex_main = "([\w\s,']*)(it|that|\"[()-.\w\s]*\")([\w\s,']*)" #For doing history/remembering
-      regex_main = "([\w\s,']*)(it|that|\"[()-.\w\s]*\")([\w\s,']*)(?:\"([\w\s(),]*)\"([\w\s,']*))*" # includes BOTH two-movie feature AND remembering-history feature
-
-      #history doesn't really work for TWO movies, it only remembers first movie in the two
-
-      #regex_main = "([\w\s,']*)\"([\w\s(),\:\-\"\'\<\>\?\!\&]*)\"([\w\s,']*)" #three capture groups
+      regex_main = "([\w\s,']*)(it|that|It|That|\"[()-.\w\s]*\")([\w\s,']*)(?:\"([\w\s(),]*)\"([\w\s,']*))*" # includes BOTH two-movie feature AND remembering-history feature
 
       movie_match = ""
       movie_match_2 = "" #second movie
@@ -174,7 +165,6 @@ class Chatbot:
         for word in parsed_input:
 
           # CHECKING FOR SIMILARITY WORDS WHEN TWO MOVIES EXIST
-
           if word in self.disimilarity_words:
             opposite_sentiment_trigger = True #if found words like "but"
           if word in self.similarity_words:
@@ -281,10 +271,14 @@ class Chatbot:
             response = "So, you thought \"%s\" was %s " % (movie_match, response_adjective)
             if currMovieId2 != -1:
               response += "and  %s was \"%s\" " %(movie_match_2, response_adjective_2) #append if second movie exists
+            else:
+              response += "."
           else:
             response = "So, you %s \"%s\" " % (response_verb, movie_match)
             if currMovieId2 != -1:
               response += "and you %s \"%s\" " %(response_verb_2, movie_match_2) #append if second movie exists
+            else:
+              response += "."
 
 
           # CHECK FOR MORE MOVEIS NEEDED OR RECOMMENDATION MADE
@@ -335,7 +329,15 @@ class Chatbot:
         word, posNeg = line[0], line[1]
         word = self.stemmer.stem(word)
         self.sentiment[word] = posNeg
-      
+
+      # CM6 - RESPOND TO EMOTION
+      self.emotion = collections.defaultdict(lambda:0)
+      emotionReader = csv.reader(file('data/emotions.txt'), delimiter=',', quoting=csv.QUOTE_MINIMAL)
+      for line in emotionReader:
+        currEmotion = line[0]
+        line = map(int, line[1:])
+        self.emotion[currEmotion] = line
+
       # Original: not stemmed
       # reader = csv.reader(open('data/sentiment.txt', 'rb'))
       # self.sentiment = dict(reader) 
@@ -410,7 +412,8 @@ class Chatbot:
       TODO: make this impact sentiment analysis? - non-binarize?
       2) Extracting sentiment with multiple-movie input (two movie)
       3) Understanding references to things said previously
-
+      Note: this does not work for more than one movie
+      6) Identifying and Responding to Emotion
 
       List of TODOs:
       - Checking unique movie for the 5 inputs
