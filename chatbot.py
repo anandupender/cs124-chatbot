@@ -43,6 +43,7 @@ class Chatbot:
       #End Two Movie Input
 
       self.userMovies = collections.defaultdict()
+      self.userEmotions = [0,0,0,0,0] # anger, disgust, fear, joy, sadness
       self.movieDict = collections.defaultdict(lambda:0)
       self.genreDict = collections.defaultdict(lambda:0)
       self.movieIDToName = collections.defaultdict(lambda:0)
@@ -104,7 +105,21 @@ class Chatbot:
 
       match = re.findall(regex_main, input)
       # print "match: {}".format(match) # DEBUGGING info
+
       if match == []:
+
+        # (CM6: Emotion detection)
+        parsed_input = self.parseInput(input)
+        currInputEmotion = [0,0,0,0,0]
+        for word in parsed_input:
+          if word in self.emotion:
+            for index, emotion in enumerate(self.emotion[word]):
+              if emotion == 1:      # if this word has this emotion
+                self.userEmotions[index] += 1
+                currInputEmotion[index] += 1
+        
+        return self.arbitraryInputHelper(parsed_input, currInputEmotion)
+
         if len(self.userMovies) == 0:
           return "Please type a valid response. Movies should be in 'quotations'" #first time user doesn't know how to input text
         else:
@@ -114,7 +129,7 @@ class Chatbot:
         movie_match_2 = match[0][3].replace('"', "") # adds second movie, might be NULL string if single movie
         parsed_input = match[0][0] + match[0][2]
 
-        # (CM6: Emotion detection)
+        parsed_input = self.parseInput(parsed_input)
 
         # CHECK IF MOVIE IS PRESENT + (CM5: Arbitrary input)
         if movie_match == "":
@@ -144,13 +159,6 @@ class Chatbot:
         if movie_match_2 in self.movieDict: #checks if second movie exists
           currMovieId2 = self.movieDict[movie_match_2] 
 
-
-        # FIND PUNCTUATION AND MAKE OWN WORD (ADD SPACE)
-        for index,char in enumerate(parsed_input):
-          if char in self.punctuation:
-            parsed_input = parsed_input[:index] + " " + parsed_input[index:]
-        parsed_input = parsed_input.split(" ")
-        filter(None, parsed_input)
 
         # EXTRACT SENTIMENT
         pos_words = []
@@ -247,7 +255,6 @@ class Chatbot:
           self.userMovies[currMovieId] = -1
           print self.userMovies[currMovieId]
 
-
           #PART OF MULTIPLE MOVIE CODE
           if currMovieId2 != -1: # if there is a second movie
             if same_sentiment_trigger == True and opposite_sentiment_trigger == False: 
@@ -269,7 +276,6 @@ class Chatbot:
           else:
             response_verb = response_intensifier + " " + response_verb
 
-
         ############# RESPONSES #################
         if self.is_turbo == True:
           response = 'processed %s in creative mode!!' % input
@@ -286,7 +292,6 @@ class Chatbot:
               response += "and you %s \"%s\" " %(response_verb_2, movie_match_2) #append if second movie exists
             else:
               response += "."
-
 
           # CHECK FOR MORE MOVEIS NEEDED OR RECOMMENDATION MADE
           if len(self.userMovies) >= 4:
@@ -305,6 +310,16 @@ class Chatbot:
             response += "How about another movie?"
 
       return response
+
+    def parseInput(self, myInput):
+       # FIND PUNCTUATION AND MAKE OWN WORD (ADD SPACE)
+      parsed_input = []
+      for index,char in enumerate(myInput):
+        if char in self.punctuation:
+          myInput = myInput[:index] + " " + myInput[index:]
+      parsed_input = myInput.split(" ")
+      filter(None, parsed_input)
+      return parsed_input
 
 
     #############################################################################
@@ -393,17 +408,27 @@ class Chatbot:
       # print 'recommendation list: {}'.format(recommendations) #DEBUGGING INFO
       return recommendations
 
-      # (CM5 Arbitrary input and CM? Identifying and responding to emotions)
-      def arbitraryInputHelper(self, input)
+    # (CM5 Arbitrary input and CM? Identifying and responding to emotions)
+    def arbitraryInputHelper(self, rawInput, currInputEmotion):
         # questionVocab
         # if input[0] in questionVocab: #Question
-        if input[0] == "Can":
+        if rawInput[0] == "Can":
           return "Can you?"
           
-
-
-        # elif ():  # TODO(anand): emotions ('I feel sad')
-
+        # anger, disgust, fear, joy, sadness
+        elif not all(v == 0 for v in currInputEmotion):  # FOUND EMOTION
+          # print rawInput
+          # print currInputEmotion
+          if currInputEmotion[0] == 1:
+            return "Don't get upset at me, I'm just the messenger."
+          elif currInputEmotion[1] == 1:
+            return "Wow you are really disgusted."
+          elif currInputEmotion[2] == 1:
+            return "Don't be scared! Everything will be ok."
+          elif currInputEmotion[3] == 1:
+            return "You getting happy makes me happy!"
+          elif currInputEmotion[4] == 1:
+            return "I am sorry you are sad. Want a tissue?"
         else:
           return "Please type a movie within quotation marks"
 
