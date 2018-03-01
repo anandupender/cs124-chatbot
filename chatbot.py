@@ -121,10 +121,14 @@ class Chatbot:
       else:
         movie_match = match[0][1].replace('"', "")
         movie_match_2 = match[0][3].replace('"', "") # adds second movie, might be NULL string if single movie
-
-        if movie_match == "":
-          return "Please type a movie within quotation marks"
         parsed_input = match[0][0] + match[0][2]
+
+        # (CM6: Emotion detection)
+
+        # CHECK IF MOVIE IS PRESENT + (CM5: Arbitrary input)
+        if movie_match == "":
+          # return "Please type a movie within quotation marks" # ORIGINAL
+          return self.arbitraryInputHelper(parsed_input)
 
         #CODE FOR REMEMBERING MOVIE INPUTS
         if movie_match == "it" or movie_match == "that": #if someone references it or that without a movie
@@ -387,6 +391,20 @@ class Chatbot:
       # print 'recommendation list: {}'.format(recommendations) #DEBUGGING INFO
       return recommendations
 
+      # (CM5 Arbitrary input and CM? Identifying and responding to emotions)
+      def arbitraryInputHelper(self, input)
+        # questionVocab
+        # if input[0] in questionVocab: #Question
+        if input[0] == "Can":
+          return "Can you?"
+          
+
+
+        # elif ():  # TODO(anand): emotions ('I feel sad')
+
+        else:
+          return "Please type a movie within quotation marks"
+
 
     #############################################################################
     # 4. Debug info                                                             #
@@ -413,15 +431,15 @@ class Chatbot:
       TODO: make this impact sentiment analysis? - non-binarize?
       2) Extracting sentiment with multiple-movie input (two movie)
       3) Understanding references to things said previously
-      4) Check unique movie from user input (implementing)
+      4) Check unique movie from user input
+      5) Responding to arbitrary input (implementing- kevin)
 
 
       List of TODOs:
-      - Checking unique movie for the 5 inputs
+      - Edge case: after recommendation, what chatbot should do
       - Speaking Fluently
       - Spell-checking movie titles
       - Identifying and responding to emotions
-      - Responding to arbitrary input
       - Identifying movies without quotation marks or perfect capitalization
       - Using non-binarized dataset
       - Alternate/foreign titles
