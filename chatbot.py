@@ -164,7 +164,7 @@ class Chatbot:
 
       #regex_main = "([\w\s,']*)(it|that|\"[()-.\w\s]*\")([\w\s,']*)" #For doing history/remembering
       if self.corrected_movie_trigger == False:
-        regex_main = "([\w\s,']*)(it|that|It|That|\"[()-.\w\s]*\")([\w\s,']*)(?:\"([\w\s(),]*)\"([\w\s,']*))*" # includes BOTH two-movie feature AND remembering-history feature
+        regex_main = "([\w\s,']*)(\b(?:it|that|It|That)\b|\"[()-.\w\s]*\")([\w\s,']*)(?:\"([\w\s(),]*)\"([\w\s,']*))*" # includes BOTH two-movie feature AND remembering-history feature
       else:
         regex_main = "(no|No|yes|Yes)()()()" #FOR REPONSE TO MOVIE CORRECTION FEATURE, ONLY WNAT YES OR NO
       #regex_main = "([\w\s,']*)\"([\w\s(),\:\-\"\'\<\>\?\!\&]*)\"([\w\s,']*)" #three capture groups
@@ -193,7 +193,7 @@ class Chatbot:
                 self.userEmotions[index] += 1
                 currInputEmotion[index] += 1
         
-        return self.arbitraryInputHelper(parsed_input, currInputEmotion)
+        return self.arbitraryInputHelper(input, currInputEmotion)
 
         if len(self.userMovies) == 0:
           return "Please type a valid response. Movies should be in 'quotations'" #first time user doesn't know how to input text
@@ -220,8 +220,8 @@ class Chatbot:
         
         # CHECK IF MOVIE IS PRESENT + (CM5: Arbitrary input)
         if movie_match == "":
-          # return "Please type a movie within quotation marks" # ORIGINAL
-          return self.arbitraryInputHelper(parsed_input)
+          return "Please type a movie within quotation marks" # ORIGINAL
+          # return self.arbitraryInputHelper(parsed_input,[])
 
         #CODE FOR REMEMBERING MOVIE INPUTS
         if movie_match == "it" or movie_match == "that" or movie_match == "It" or movie_match == "That": #if someone references it or that without a movie
@@ -504,28 +504,29 @@ class Chatbot:
 
     # (CM5 Arbitrary input and CM? Identifying and responding to emotions)
     def arbitraryInputHelper(self, rawInput, currInputEmotion):
+      rawInput = re.sub('[!?]', '', rawInput)
+      userInput = rawInput.split(' ')
+      userInputLowerCase = rawInput.lower().split(' ')
 
-      # ANAND COMMENT OUT FOR NOW BECAUSE NOT WORKING WITH ALREADY PARSED STRING
-      # userInput = rawInput.split(' ')
-      # userInputLowerCase = rawInput.lower().split(' ')
-
-      # rawResponse = self.reverseSubject(userInput)
-      # if userInputLowerCase[0] == "can" and userInputLowerCase[1] == "i":
-      #   return "I don't know if you can " + ' '.join(rawResponse[2:])
-      # elif userInputLowerCase[0] == "can" and userInputLowerCase[1] == "you":
-      #   return "I don't know if I can " + ' '.join(rawResponse[2:])
-      # elif userInputLowerCase[0] == "who":
-      #   return "I don't know who " + ' '.join(rawResponse[2:]) + rawResponse[1]
-      # elif userInputLowerCase[0] == "what":
-      #   return "I don't know what " + ' '.join(rawResponse[2:]) + rawResponse[1]
-      # elif userInputLowerCase[0] == "where":
-      #   return "I don't know where " + ' '.join(rawResponse[2:]) + rawResponse[1]
-      # elif userInputLowerCase[0] == "when":
-      #   return "I don't know when " + ' '.join(rawResponse[2:]) + rawResponse[1]
-      # elif userInputLowerCase[0] == "why":
-      #   return "I don't know why " + ' '.join(rawResponse[2:]) + rawResponse[1]
-      # elif userInputLowerCase[0] == "how":
-      #   return "I don't know how " + ' '.join(rawResponse[2:]) + rawResponse[1]
+      rawResponse = self.reverseSubject(userInput)
+      print rawResponse
+      if userInputLowerCase[0] == "can" and userInputLowerCase[1] == "i":
+        return "I don't know if you can " + ' '.join(rawResponse[2:])
+      elif userInputLowerCase[0] == "can" and userInputLowerCase[1] == "you":
+        return "I don't know if I can " + ' '.join(rawResponse[2:])
+      elif userInputLowerCase[0] == "who":
+        return "Sorry, I don't know."
+      elif userInputLowerCase[0] == "what":
+        return "Sorry, I don't know."
+      elif userInputLowerCase[0] == "where":
+        return "Maybe in your basement."
+      elif userInputLowerCase[0] == "when":
+        return "I don't know when. I'm not your secretary."
+      elif userInputLowerCase[0] == "why":
+        return "Why... that's a good question."
+      elif userInputLowerCase[0] == "how":
+        return "I don't know how. Or else I won't just be text appearing on your screen."
+        # return "I don't know how " + ' '.join(rawResponse[2:]) + ' ' + rawResponse[1]
 
       # anger, disgust, fear, joy, sadness
       random = randint(0, 3)
@@ -554,7 +555,7 @@ class Chatbot:
     def reverseSubject(self, userInput):
       rawResponse = []
       prev = ""
-      for idx in len(userInput):
+      for idx in range(len(userInput)):
         word = userInput[idx]
         if word == 'i' or word == 'I':
           rawResponse.append('you')
