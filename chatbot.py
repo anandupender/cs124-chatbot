@@ -404,8 +404,19 @@ class Chatbot:
       Remember: in the starter mode, movie names will come in quotation marks and
       expressions of sentiment will be simple!
       CREATIVE EXTENSIONS
-      1) Fine-Tune Sentiment - bot responds to certain strong words and intensifiers 
+      1) Fine-Grained Sentiment - bot responds to certain strong words and intensifiers 
       TODO: make this impact sentiment analysis? - non-binarize?
+      2) Extracting sentiment with multiple-movie input
+
+      List of TODOs:
+      - Speaking Fluently
+      - Spell-checking movie titles
+      - Understanding references to things said previously
+      - Identifying and responding to emotions
+      - Responding to arbitrary input
+      - Identifying movies without quotation marks or perfect capitalization
+      - Using non-binarized dataset
+      - Alternate/foreign titles
       """
       # TODO: update this when you are working on new creative extentions!!!
     #############################################################################
