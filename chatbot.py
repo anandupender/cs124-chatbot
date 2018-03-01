@@ -38,6 +38,13 @@ class Chatbot:
       self.intensifiersSubject = {"really","reeally","extremely","absolutely"}
       self.intensifiersObject = {"really","reeally","very","extremely","remarkably","unusually","utterly","absolutely","exceptionally"}
 
+      #For Two movie input
+
+      self.similarity_words = {"either", "neither", "both", "and"}
+      self.disimilarity_words = {"but"} #TODO: any more?
+
+      #End Two Movie Input
+
       self.userMovies = collections.defaultdict()
       self.movieDict = collections.defaultdict(lambda:0)
       self.genreDict = collections.defaultdict(lambda:0)
@@ -88,58 +95,21 @@ class Chatbot:
         # you _negaitve word_ movie
         #let me hear another one
       """
-      ########### Original starter mode implementation ############
-      # if self.turbo == True:
-      #   regex_multiple_movies = "([\w\s,']*)\"([\w\s(),\:\-\"\'\<\>\?\!\&]*)\"([\w\s,']*)(?:\"([\w\s(),\:\-\"\'\<\>\?\!\&]*)\"([\w\s,']*))*"
-      #   movie_matches = []
-      #   parsed_input = ""
-      #   response_sentiment = ""
-      #   match = re.findall(regex_main, input)
 
-      # if match == []:
-      #   if len(self.userMovies) == 0:
-      #     response = "Please type a valid response. Movies should be in 'quotations'" #first time user doesn't know how to input text
-      #     return response
-      #   else:
-      #     response = "I want to hear about more movies!"    # edge case when user gets bored
-      #     return response
-      # else:
-      #   for i, movie in enumerate(match):
-      #     movie_match.append(match[0][i*2 + 1])
-      #   for movie in movie_match:
 
-      #     #movie_match = match[0][1]
-      #     if movie == "":
-      #       response = "Please type a movie within quotation marks"
-      #       return response
-      #     parsed_input = match[0][0] + match[0][2]
+      #regex_main = "([\w\s,']*)(it|that|\"[()-.\w\s]*\")([\w\s,']*)" #For doing history/remembering
+      regex_main = "([\w\s,']*)(it|that|\"[()-.\w\s]*\")([\w\s,']*)(?:\"([\w\s(),]*)\"([\w\s,']*))*" # includes BOTH two-movie feature AND remembering-history feature
 
-      #   # Check if movie exists!
-      #     if movie_match in self.movieDict:
-      #       currMovieId = self.movieDict[movie_match]
-      #     else:
-      #       response = "I could not find one of those movies"
-      #       return response
+      #history doesn't really work for TWO movies, it only remembers first movie in the two
 
-      #   # FIND PUNCTUATION AND MAKE OWN WORD (ADD SPACE)
-      #     for index,char in enumerate(parsed_input):
-      #       if char in self.punctuation:
-      #         parsed_input = parsed_input[:index] + " " + parsed_input[index:]
-      #     parsed_input = parsed_input.split(" ")
-      #     filter(None, parsed_input)
-      #   else:
-
-      #save movie and sentiment
-      #it, that, 
-      #"any word" or it and that
-
-      #if self.turbo == True:
-      regex_main = "([\w\s,']*)(it|that|\"[()-.\w\s]*\")([\w\s,']*)"
       #regex_main = "([\w\s,']*)\"([\w\s(),\:\-\"\'\<\>\?\!\&]*)\"([\w\s,']*)" #three capture groups
 
       movie_match = ""
+      movie_match_2 = "" #second movie
+      two_movie_matches = []
       parsed_input = "" 
-      currMovieId = 0
+      currMovieId = -1
+      currMovieId2 = -1 #same method for dealing with a second movie
 
       match = re.findall(regex_main, input)
       # print "match: {}".format(match) # DEBUGGING info
@@ -150,12 +120,14 @@ class Chatbot:
           return "I want to hear about more movies!"    # edge case when user gets bored
       else:
         movie_match = match[0][1].replace('"', "")
+        movie_match_2 = match[0][3].replace('"', "") # adds second movie, might be NULL string if single movie
+
         if movie_match == "":
           return "Please type a movie within quotation marks"
         parsed_input = match[0][0] + match[0][2]
 
         #CODE FOR REMEMBERING MOVIE INPUTS
-        if movie_match == "it" or movie_match == "that":
+        if movie_match == "it" or movie_match == "that": #if someone references it or that without a movie
           if len(self.movie_history) > 0:
             movie_match = self.movie_history[len(self.movie_history) - 1]
           else:
@@ -163,13 +135,16 @@ class Chatbot:
             return response
 
         self.movie_history.append(movie_match)
+
         #END CODE FOR REMEMBERING MOVIE INPUTS!
 
-        # CHECK IF MOVIE EXISTS
+        #CHECK IF MOVIES EXISTS
         if movie_match in self.movieDict:
           currMovieId = self.movieDict[movie_match]
         else:
-          return "Sorry, but that movie is too hip for me! Can you tell me about another movie?"
+          return "Sorry, but that movie is too hip for me, or it might not exist! Can you tell me about another movie?"
+        if movie_match_2 in self.movieDict: #checks if second movie exists
+          currMovieId2 = self.movieDict[movie_match_2] 
 
 
         # FIND PUNCTUATION AND MAKE OWN WORD (ADD SPACE)
@@ -184,13 +159,27 @@ class Chatbot:
         neg_words = []
 
         #INITIALIZE RESPONSE VARIABLES
+
+        opposite_sentiment_trigger = False # User has different feelings about two movies
+        same_sentiment_trigger = False #User has same feelings about two movies
+
         negationTrigger = False   # triggers at neg words
         objectTrigger = False     # triggers based on sentence strucutre (I really like star wars versus, star wars was really bad)
         response_intensifier = ""
         response_verb = ""
+        response_verb_2 = "" #for second movie
         response_adjective = ""
+        response_adjective_2 = "" # for second movie
 
         for word in parsed_input:
+
+          # CHECKING FOR SIMILARITY WORDS WHEN TWO MOVIES EXIST
+
+          if word in self.disimilarity_words:
+            opposite_sentiment_trigger = True #if found words like "but"
+          if word in self.similarity_words:
+            same_sentiment_trigger = True #if found words like "both"
+
 
           # INTENSIFIERS
           if word in self.intensifiersSubject:
@@ -235,12 +224,46 @@ class Chatbot:
           if response_verb == "": 
             response_verb = "liked"
           self.userMovies[currMovieId] = 1
+          print self.userMovies[currMovieId]
+
+          #PART OF MULTIPLE MOVIE CODE
+          if currMovieId2 != -1: #if there is a second movie
+            if same_sentiment_trigger == True and opposite_sentiment_trigger == False: #if sentiment for two movies is same
+              self.userMovies[currMovieId2] = 1
+              response_verb_2 = response_verb
+              response_adjective_2 = response_adjective
+            elif same_sentiment_trigger == False and opposite_sentiment_trigger == True:
+              self.userMovies[currMovieId2] = -1
+              response_verb_2 = "disliked"
+              response_adjective_2 = "bad"
+            else:
+              response = "I don't know how you felt about those two movies, could you clarify for me?"
+              return response
+
+          #END PART OF MULTIPLE MOVIE CODE
+
         elif len(neg_words) > len(pos_words) and not objectTrigger:
           if response_adjective == "": 
             response_adjective = "bad"
           if response_verb == "": 
             response_verb = "disliked"
           self.userMovies[currMovieId] = -1
+          print self.userMovies[currMovieId]
+
+
+          #PART OF MULTIPLE MOVIE CODE
+          if currMovieId2 != -1: # if there is a second movie
+            if same_sentiment_trigger == True and opposite_sentiment_trigger == False: 
+              self.userMovies[currMovieId2] = -1
+              response_verb_2 = response_verb
+              response_adjective_2 = response_adjective
+            elif same_sentiment_trigger == False and opposite_sentiment_trigger == True:
+              self.userMovies[currMovieId2] = 1
+              response_verb_2 = "liked"
+              response_adjective = "good"
+            else:
+              response = "I don't know how you felt about those two movies, could you clarify for me?"
+              return response
 
         # APPEND INTENSIFIER IN RESPONSE
         if response_intensifier != "":
@@ -253,24 +276,33 @@ class Chatbot:
         ############# RESPONSES #################
         if self.is_turbo == True:
           response = 'processed %s in creative mode!!' % input
-        elif len(self.userMovies) >= 4:
-          recommendations = self.recommend(self.userMovies)
-
-          # TODO: Would you like to hear another recommendation? (Or enter :quit if you're done.)
-          if objectTrigger:
-            response = "You thought \"%s\" was %s. Thank you! \n That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (movie_match, response_adjective, recommendations[0])
-          else:
-            response = "You %s \"%s\". Thank you! \n That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (response_verb, movie_match, recommendations[0])
         else:
           if objectTrigger:
-            response = "So, you thought \"%s\" was %s. " % (movie_match, response_adjective)
+            response = "So, you thought \"%s\" was %s " % (movie_match, response_adjective)
+            if currMovieId2 != -1:
+              response += "and  %s was \"%s\" " %(movie_match_2, response_adjective_2) #append if second movie exists
           else:
-            response = "So, you %s \"%s\". " % (response_verb, movie_match)
-          
+            response = "So, you %s \"%s\" " % (response_verb, movie_match)
+            if currMovieId2 != -1:
+              response += "and you %s \"%s\" " %(response_verb_2, movie_match_2) #append if second movie exists
+
+
+          # CHECK FOR MORE MOVEIS NEEDED OR RECOMMENDATION MADE
+          if len(self.userMovies) >= 4:
+            recommendations = self.recommend(self.userMovies)
+
+            # TODO: Would you like to hear another recommendation? (Or enter :quit if you're done.)
+            if objectTrigger:
+              response += "Thank you! \n That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (recommendations[0])
+            else:
+              response += "Thank you! \n That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (recommendations[0])
+          else:
+            response += "How about another movie?"
+
           #START INQUIRING ABOUT THEIR MOVIE PREFERENCE GENRES
           if len(self.userMovies) >= 2:
+            response += "How about another movie?"
 
-          response += "How about another movie?"
       return response
 
 
@@ -374,8 +406,21 @@ class Chatbot:
       Remember: in the starter mode, movie names will come in quotation marks and
       expressions of sentiment will be simple!
       CREATIVE EXTENSIONS
-      1) Fine-Tune Sentiment - bot responds to certain strong words and intensifiers 
+      1) Fine-Grained Sentiment - bot responds to certain strong words and intensifiers 
       TODO: make this impact sentiment analysis? - non-binarize?
+      2) Extracting sentiment with multiple-movie input (two movie)
+      3) Understanding references to things said previously
+
+
+      List of TODOs:
+      - Checking unique movie for the 5 inputs
+      - Speaking Fluently
+      - Spell-checking movie titles
+      - Identifying and responding to emotions
+      - Responding to arbitrary input
+      - Identifying movies without quotation marks or perfect capitalization
+      - Using non-binarized dataset
+      - Alternate/foreign titles
       """
       # TODO: update this when you are working on new creative extentions!!!
     #############################################################################
