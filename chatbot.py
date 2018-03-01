@@ -406,12 +406,14 @@ class Chatbot:
       CREATIVE EXTENSIONS
       1) Fine-Grained Sentiment - bot responds to certain strong words and intensifiers 
       TODO: make this impact sentiment analysis? - non-binarize?
-      2) Extracting sentiment with multiple-movie input
+      2) Extracting sentiment with multiple-movie input (two movie)
+      3) Understanding references to things said previously
+
 
       List of TODOs:
+      - Checking unique movie for the 5 inputs
       - Speaking Fluently
       - Spell-checking movie titles
-      - Understanding references to things said previously
       - Identifying and responding to emotions
       - Responding to arbitrary input
       - Identifying movies without quotation marks or perfect capitalization
