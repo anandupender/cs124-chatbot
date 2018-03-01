@@ -220,7 +220,7 @@ class Chatbot:
         # CHECK IF MOVIE IS PRESENT + (CM5: Arbitrary input)
         if movie_match == "":
           # return "Please type a movie within quotation marks" # ORIGINAL
-          return self.arbitraryInputHelper(parsed_input)
+          return self.arbitraryInputHelper(parsed_input,[])
 
         #CODE FOR REMEMBERING MOVIE INPUTS
         if movie_match == "it" or movie_match == "that" or movie_match == "It" or movie_match == "That": #if someone references it or that without a movie
@@ -253,10 +253,6 @@ class Chatbot:
         if movie_match_2 in self.movieDict: #checks if second movie exists
           currMovieId2 = self.movieDict[movie_match_2]
 
-<<<<<<< HEAD
-=======
-
->>>>>>> ef24f793580093c20ba8faf42ddd30cb51f3fca5
         # EXTRACT SENTIMENT
         pos_words = []
         neg_words = []
