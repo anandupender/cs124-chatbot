@@ -48,7 +48,7 @@ class Chatbot:
       self.userMovies = collections.defaultdict()
       self.movieDict = collections.defaultdict(lambda:0)
       self.genreDict = collections.defaultdict(lambda:0)
-      self.movieNameList = []
+      self.movieIDToName = collections.defaultdict(lambda:0)
       self.movie_name_to_id()
       self.movie_history = []
 
@@ -138,8 +138,11 @@ class Chatbot:
 
         #END CODE FOR REMEMBERING MOVIE INPUTS!
 
-        #CHECK IF MOVIES EXISTS
+        #CHECK IF MOVIES EXISTS & IS NEW MOVIE FROM USER
         if movie_match in self.movieDict:
+          for mID in self.userMovies:
+            if movie_match == self.movieIDToName[mID]:
+              return "Already got that! Please give me another movie!"
           currMovieId = self.movieDict[movie_match]
         else:
           return "Sorry, but that movie is too hip for me, or it might not exist! Can you tell me about another movie?"
@@ -319,7 +322,7 @@ class Chatbot:
         genres = genres.split("|")
         self.movieDict[title] = movieID
         self.genreDict[title] = genres
-        self.movieNameList.append(title)
+        self.movieIDToName[movieID] = title
 
     def read_data(self):
       """Reads the ratings matrix from file"""
@@ -380,7 +383,7 @@ class Chatbot:
       recommendations = []
       recommendationCounter = collections.Counter(estRatings)
       for movieID, rating in recommendationCounter.most_common(3):
-        recommendations.append(self.movieNameList[movieID]) # Note: movieID happens to be same as index of movie in list
+        recommendations.append(self.movieIDToName[movieID]) # Note: movieID happens to be same as index of movie in list
       # print 'recommendation list: {}'.format(recommendations) #DEBUGGING INFO
       return recommendations
 
@@ -410,6 +413,7 @@ class Chatbot:
       TODO: make this impact sentiment analysis? - non-binarize?
       2) Extracting sentiment with multiple-movie input (two movie)
       3) Understanding references to things said previously
+      4) Check unique movie from user input (implementing)
 
 
       List of TODOs:
