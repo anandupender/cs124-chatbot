@@ -52,7 +52,8 @@ class Chatbot:
     #############################################################################
 
     def greeting(self):
-      greeting_message = "Hi I'm Leroy! I'm your movie best friend. Tell me some movies you like or hate and I'll share some new ones you might like. \n What is your name?"
+      greeting_message = "Hi I'm Leroy! I'm your movie best friend. Tell me some movies you like or hate and I'll share some new ones you might like."
+
       return greeting_message
 
     def goodbye(self):
@@ -466,9 +467,6 @@ class Chatbot:
       if userInputLowerCase[0:3] == ["my","name","is"]:
         self.userName = ' '.join(userInput[3:])
         return "Hi " + self.userName + "!"
-      if userInputLowerCase[0:2] == ["i","am"]:
-        self.userName = ' '.join(userInput[2:])
-        return "Hi " + self.userName + "!"
 
       # Utilizes user input
       if userInputLowerCase[0] == "can" and userInputLowerCase[1] == "i": 
@@ -603,7 +601,7 @@ class Chatbot:
 
       OTHER CREATIVE FEATURES
       1) As a user starts telling Leroy about movies they like, he can pick up on their favorite or least favorite genres and let the user know. (must be at least 2 similar movie genres)
-      2) Leroy will remember your name! Type: My name is ____ or I am ____
+      2) Leroy will remember your name! Type: My name is ____
       3) User can get up to 5 movie recommendations
       4) Makes sure user is inputing new movies
       """
