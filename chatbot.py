@@ -359,7 +359,7 @@ class Chatbot:
       # movie i by user j
       self.titles, self.ratings = ratings()
       self.sentiment = collections.defaultdict(lambda:0)
-      reader = csv.reader(file('data/sentiment.txt'), delimiter=',', quoting=csv.QUOTE_MINIMAL)
+      reader = csv.reader(file('deps/sentiment.txt'), delimiter=',', quoting=csv.QUOTE_MINIMAL)
       for line in reader:
         word, posNeg = line[0], line[1]
         word = self.stemmer.stem(word)
@@ -367,7 +367,7 @@ class Chatbot:
 
       # CM6 - RESPOND TO EMOTION
       self.emotion = collections.defaultdict(lambda:0)
-      emotionReader = csv.reader(file('data/emotions.txt'), delimiter=',', quoting=csv.QUOTE_MINIMAL)
+      emotionReader = csv.reader(file('deps/emotions.txt'), delimiter=',', quoting=csv.QUOTE_MINIMAL)
       for line in emotionReader:
         currEmotion = line[0]
         line = map(int, line[1:])
