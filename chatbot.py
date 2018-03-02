@@ -25,6 +25,7 @@ class Chatbot:
     #############################################################################
     def __init__(self, is_turbo=False):
       self.name = 'Leroy'
+      self.userName = ''
       self.is_turbo = is_turbo
       self.stemmer = PorterStemmer()
       self.read_data()
@@ -60,7 +61,7 @@ class Chatbot:
     def greeting(self):
       """chatbot greeting message"""
       # A short greeting message                                      #
-      greeting_message = "Hi I'm Leroy! I'm your movie best friend. Tell me some movies you like or hate and I'll share some new ones you might like."
+      greeting_message = "Hi I'm Leroy! I'm your movie best friend. Tell me some movies you like or hate and I'll share some new ones you might like. \n What is your name?"
       return greeting_message
 
     def goodbye(self):
@@ -68,8 +69,12 @@ class Chatbot:
       #############################################################################
       # A short farewell message                                      #
       #############################################################################
-      # TODO(kevin): reply based on mood of user!
-      goodbye_message = 'Have a nice day!'
+      goodbye_message = 'Aww... I hope to see you again soon '
+      if self.userName == '':
+        goodbye_message += 'my friend!'
+      else:
+        goodbye_message += self.userName + '!'
+      goodbye_message += ' Have a nice day!'
 
       #############################################################################
       #                             END OF YOUR CODE                              #
@@ -323,7 +328,10 @@ class Chatbot:
       else:
         self.movie_recommendations = self.recommend(self.userMovies)
         recommendation = self.movie_recommendations.pop(0)
-        response += " \n Thank you! That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (recommendation)
+        if self.userName == "":
+          response += " \n Thank you! That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (recommendation)
+        else:
+          response += " \n Thank you " + self.userName + "! That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (recommendation)
         response += " Would you like to hear another recommendation? Please respond with yes or no."
 
 
@@ -350,9 +358,7 @@ class Chatbot:
       # This matrix has the following shape: num_movies x num_users
       # The values stored in each row i and column j is the rating for
       # movie i by user j
-      self.titles, self.ratings = ratings() #TODO: do we need to add this to init()?
-      
-      # TODO: TEST stem these sentiments
+      self.titles, self.ratings = ratings()
       self.sentiment = collections.defaultdict(lambda:0)
       reader = csv.reader(file('data/sentiment.txt'), delimiter=',', quoting=csv.QUOTE_MINIMAL)
       for line in reader:
@@ -408,7 +414,7 @@ class Chatbot:
 
       recommendations = []
       recommendationCounter = collections.Counter(estRatings)
-      for movieID, rating in recommendationCounter.most_common(3):
+      for movieID, rating in recommendationCounter.most_common(5):
         recommendations.append(self.movieIDToName[movieID]) # Note: movieID happens to be same as index of movie in list
       # print 'recommendation list: {}'.format(recommendations) #DEBUGGING INFO
       return recommendations
@@ -479,30 +485,53 @@ class Chatbot:
       
       return self.arbitraryInputHelper(raw_input, currInputEmotion)
 
-    # (CM5 Arbitrary input and CM? Identifying and responding to emotions)
+    # (CM5 Arbitrary input and CM6 Identifying and responding to emotions)
     def arbitraryInputHelper(self, rawInput, currInputEmotion):
       rawInput = re.sub('[!?]', '', rawInput)
       userInput = rawInput.split(' ')
       userInputLowerCase = rawInput.lower().split(' ')
-
       rawResponse = self.reverseSubject(userInput)
-      print rawResponse
-      if userInputLowerCase[0] == "can" and userInputLowerCase[1] == "i":
-        return "I don't know if you can " + ' '.join(rawResponse[2:])
+      # print rawResponse # DEBUGGING
+
+      # (add onto CM1) Easter egg: anything containing Leroy
+      if 'leroy' in userInputLowerCase:
+        return "That's my name!"
+      if userInputLowerCase[0:] == ["what","movies","do","you","like"]:
+        return "I like Interstellar a lot. How about movies you like?"
+
+      # Get user name!
+      if userInputLowerCase[0:3] == ["my","name","is"]:
+        self.userName = ' '.join(userInput[3:])
+        return "Hi " + self.userName + "!"
+      if userInputLowerCase[0:2] == ["i","am"]:
+        self.userName = ' '.join(userInput[2:])
+        return "Hi " + self.userName + "!"
+
+      # Utilizes user input
+      if userInputLowerCase[0] == "can" and userInputLowerCase[1] == "i": 
+        return "I don't know if you can " + ' '.join(rawResponse[2:]) + "."
       elif userInputLowerCase[0] == "can" and userInputLowerCase[1] == "you":
-        return "I don't know if I can " + ' '.join(rawResponse[2:])
-      elif userInputLowerCase[0] == "who":
-        return "Sorry, I don't know."
+        return "I don't know if I can " + ' '.join(rawResponse[2:])  + "."
       elif userInputLowerCase[0] == "what":
-        return "Sorry, I don't know."
+        if userInputLowerCase[1:4] == ["is","my","name"]:
+          if self.userName != '':
+            return "Your name is " + self.userName + "!"
+          else:
+            return "I don't know your name yet. What is your name?"
+        if "do" not in userInputLowerCase and "does" not in userInputLowerCase:
+          return "I don't know what " + ' '.join(rawResponse[2:]) + ' ' + rawResponse[1]  + "."
+        else:
+          return "Sorry, I don't know."
+      elif userInputLowerCase[0] == "who":
+        return "Hmm..."
       elif userInputLowerCase[0] == "where":
-        return "Maybe in your basement."
+        return "Maybe in your basement?"
       elif userInputLowerCase[0] == "when":
         return "I don't know when. I'm not your secretary."
       elif userInputLowerCase[0] == "why":
         return "Why... that's a good question."
       elif userInputLowerCase[0] == "how":
-        return "I don't know how. Or else I won't just be text appearing on your screen."
+        return "I don't know how. But I'd love to hear about some movies you've watched!"
         # return "I don't know how " + ' '.join(rawResponse[2:]) + ' ' + rawResponse[1]
 
       # anger, disgust, fear, joy, sadness
@@ -512,7 +541,7 @@ class Chatbot:
       fearResponses = ["Don't be scared! Everything will be ok.","Well now I'm scared too!","It's just a movie, don't be scared!", "I'm your friend, don't get scared."]
       happyResponses = ["You getting happy makes me happy!","I love your enthusiasm!","Woah there, don't get too excited...","Glad, you're happy...I'm for sure not."]
       sadResponses = ["I am sorry you are sad. Want a tissue?","Build a bridge and get over it.","Know what tears are? Water? Know what computers don't like? You guessed it!","Know what tears are? Water? Know what computers don't like? You guessed it!"]
-      defaultResponses = ["Hmm, not sure I get your point","Wait what, say that again.","Yea...I'm not following","We're not on the same page right now."]
+      defaultResponses = ["Hmm, not sure I get your point.","Wait what, say that again.","Yea...I'm not following.","We're not on the same page right now.","Got it. Why don't we talk about movies some more?"]
       if not all(v == 0 for v in currInputEmotion):  # FOUND EMOTION
 
         if currInputEmotion[0] == 1:
@@ -529,7 +558,7 @@ class Chatbot:
       else:
         if len(self.userMovies) == 0:
           return defaultResponses[random] + " Please type a movie within quotation marks."
-        return defaultResponses[random] + " Are you sure we are still talking about movies?"
+        return defaultResponses[random] #+ " Are you sure we are still talking about movies?"
 
     def reverseSubject(self, userInput):
       rawResponse = []
@@ -538,7 +567,9 @@ class Chatbot:
         word = userInput[idx]
         if word == 'i' or word == 'I':
           rawResponse.append('you')
-        if word == 'me':
+          if prev == 'am':
+              rawResponse[idx-1] = 'are'
+        elif word == 'me':
           rawResponse.append('you')
         elif word == 'you':
           if idx == len(userInput)-1:
@@ -547,6 +578,12 @@ class Chatbot:
             rawResponse.append('I')
             if prev == 'are':
               rawResponse[idx-1] = 'am'
+        elif word == 'are':
+          if prev == 'i' or prev == 'I':
+            rawResponse[idx-1] = 'am'
+        elif word == 'am':
+          if prev == 'you':
+            rawResponse[idx-1] = 'are'
         else:
           rawResponse.append(word)
         prev = word
@@ -595,30 +632,20 @@ class Chatbot:
     #############################################################################
     def intro(self):
       return """
-      Your task is to implement the chatbot as detailed in the PA6 instructions.
-      Remember: in the starter mode, movie names will come in quotation marks and
-      expressions of sentiment will be simple!
       CREATIVE EXTENSIONS
-      1) Fine-Grained Sentiment - bot responds to certain strong words and intensifiers 
-      TODO: make this impact sentiment analysis? - non-binarize?
-      2) Extracting sentiment with multiple-movie input (two movie)
-      3) Understanding references to things said previously
-      Note: this does not work for more than one movie
-      4) Check unique movie from user input
+      1) Speaking Very Fluently
+      2) Fine-Grained Sentiment - bot responds to certain strong words and intensifiers 
+      2) Spell Checking Movie Titles
+      3) Understanding references to things said previously (Note: this does not work for more than one movie)
+      4) Extracting sentiment with multiple-movie input (two movie)
       5) Responding to arbitrary input (implementing- kevin)
       6) Identifying and Responding to Emotion (bot is great at identifying sadness, fear, anger, joy, and disgust but sometimes has a hard time differentiating amongst similar ones)
 
-      EXTRA FEATURES:
-      1) As a user start telling Leroy about movies they like, he can pick up on their favorite or least favorite genres and let the user know. (must be at least 2 similar movie genres)
-      2) If a user omits a year in the movie, Leroy will correct them and make sure it's the right one
-      3) User can get up to XXXX movie recommendations #TODO: kevin
-
-      List of TODOs:
-      - Update intro section to reflect instructions carefully #TODO: kevin
-      - Edge case: after recommendation, what chatbot should do
-      - Speaking Fluently
-      - Identifying movies without quotation marks or perfect capitalization (probably not)
-      - Using non-binarized dataset (probably not)
+      OTHER CREATIVE FEATURES
+      1) As a user starts telling Leroy about movies they like, he can pick up on their favorite or least favorite genres and let the user know. (must be at least 2 similar movie genres)
+      2) Leroy will remember your name! Type: My name is ____ or I am ____
+      3) User can get up to 5 movie recommendations
+      4) Makes sure user is inputing new movies
       """
       # TODO: update this when you are working on new creative extentions!!!
     #############################################################################
