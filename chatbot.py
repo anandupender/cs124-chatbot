@@ -359,7 +359,7 @@ class Chatbot:
       # movie i by user j
       self.titles, self.ratings = ratings()
       self.sentiment = collections.defaultdict(lambda:0)
-      reader = csv.reader(file('data/sentiment.txt'), delimiter=',', quoting=csv.QUOTE_MINIMAL)
+      reader = csv.reader(file('deps/sentiment.txt'), delimiter=',', quoting=csv.QUOTE_MINIMAL)
       for line in reader:
         word, posNeg = line[0], line[1]
         word = self.stemmer.stem(word)
