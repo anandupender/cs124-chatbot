@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # PA6, CS124, Stanford, Winter 2018
+# v.1.0.2
 # Original Python code by Ignacio Cases (@cases)
 # Modified by Anand Upender, Chase Lortie, Kevin Liao
 ######################################################################
@@ -16,7 +17,11 @@ from random import randint
 from PorterStemmer import PorterStemmer
 
 class Chatbot:
+    """Simple class to implement the chatbot for PA 6."""
 
+    #############################################################################
+    # `moviebot` is the default chatbot. Change it to your chatbot's name       #
+    #############################################################################
     def __init__(self, is_turbo=False):
       self.name = 'Leroy'
       self.userName = ''
@@ -37,6 +42,7 @@ class Chatbot:
       #For Two movie input
       self.similarity_words = {"either", "neither", "both", "and"}
       self.disimilarity_words = {"but"} #TODO: any more?
+      #End Two Movie Input
 
       self.userMovies = collections.defaultdict()
       self.userEmotions = [0,0,0,0,0] # anger, disgust, fear, joy, sadness
@@ -52,17 +58,26 @@ class Chatbot:
     #############################################################################
 
     def greeting(self):
+      """chatbot greeting message"""
+      # A short greeting message                                      #
       greeting_message = "Hi I'm Leroy! I'm your movie best friend. Tell me some movies you like or hate and I'll share some new ones you might like. \n What is your name?"
       return greeting_message
 
     def goodbye(self):
       """chatbot goodbye message"""
+      #############################################################################
+      # A short farewell message                                      #
+      #############################################################################
       goodbye_message = 'Aww... I hope to see you again soon '
       if self.userName == '':
         goodbye_message += 'my friend!'
       else:
         goodbye_message += self.userName + '!'
       goodbye_message += ' Have a nice day!'
+
+      #############################################################################
+      #                             END OF YOUR CODE                              #
+      #############################################################################
 
       return goodbye_message
 
@@ -71,6 +86,17 @@ class Chatbot:
     # 2. Modules 2 and 3: extraction and transformation                         #
     #############################################################################
     def process(self, input):
+      """Takes the input string from the REPL and call delegated functions
+      that
+        1) extract the relevant information and
+        #regex and sentiment analysis
+        # hate = negative_word
+        #capture all words before movie, "_movie_", everything after
+        #look through captured 
+        2) transform the information into a response to the user
+        # you _negaitve word_ movie
+        #let me hear another one
+      """
 
       if self.corrected_movie_trigger == False and len(self.movie_recommendations) == 0:
         regex_main = "([\w\s,']*)(\b(?:it|that|It|That)\b|\"[()-.,':\w\s]*\")([\w\s,']*)(?:\"([\w\s(),]*)\"([\w\s,']*))*" # includes BOTH two-movie feature AND remembering-history feature
@@ -184,6 +210,7 @@ class Chatbot:
         if word in self.similarity_words:
           same_sentiment_trigger = True #if found words like "both"
 
+
         # INTENSIFIERS
         if word in self.intensifiersSubject:
           response_intensifier = word
@@ -227,6 +254,7 @@ class Chatbot:
         if response_verb == "": 
           response_verb = "liked"
         self.userMovies[currMovieId] = 1
+        # print self.userMovies[currMovieId]
 
         #PART OF MULTIPLE MOVIE CODE
         if currMovieId2 != -1: #if there is a second movie
@@ -241,6 +269,8 @@ class Chatbot:
           else:
             response = "I don't know how you felt about those two movies, could you clarify for me?"
             return response
+
+        #END PART OF MULTIPLE MOVIE CODE
 
       elif len(neg_words) > len(pos_words) and not objectTrigger:
         if response_adjective == "": 
@@ -325,9 +355,11 @@ class Chatbot:
     def read_data(self):
       """Reads the ratings matrix from file"""
       # This matrix has the following shape: num_movies x num_users
+      # The values stored in each row i and column j is the rating for
+      # movie i by user j
       self.titles, self.ratings = ratings()
       self.sentiment = collections.defaultdict(lambda:0)
-      reader = csv.reader(file('data/sentiment.txt'), delimiter=',', quoting=csv.QUOTE_MINIMAL)
+      reader = csv.reader(file('deps/sentiment.txt'), delimiter=',', quoting=csv.QUOTE_MINIMAL)
       for line in reader:
         word, posNeg = line[0], line[1]
         word = self.stemmer.stem(word)
@@ -359,6 +391,7 @@ class Chatbot:
             self.ratings[row][col] = 1
           elif rating != 0:
             self.ratings[row][col] = -1
+
 
     def recommend(self, userRatings):
       """Generates a list of movies based on the input vector u using
@@ -419,7 +452,8 @@ class Chatbot:
       # by deletions:
       for row in range(1, rows):
           dist[row][0] = row * deletes
-
+      # target prefixes can be created from an empty source string
+      # by inserting the characters
       for col in range(1, cols):
           dist[0][col] = col * inserts
           
@@ -432,6 +466,8 @@ class Chatbot:
               dist[row][col] = min(dist[row-1][col] + deletes,
                                    dist[row][col-1] + inserts,
                                    dist[row-1][col-1] + cost) # substitution
+      #for r in range(rows):
+          #print(dist[r])
    
       return dist[row][col]
 
@@ -583,6 +619,9 @@ class Chatbot:
     #############################################################################
 
     def debug(self, input):
+      """Returns debug information as a string for the input string from the REPL"""
+      # Pass the debug information that you may think is important for your
+      # evaluators
       debug_info = 'debug info'
       return debug_info
 
@@ -607,6 +646,13 @@ class Chatbot:
       3) User can get up to 5 movie recommendations
       4) Makes sure user is inputing new movies
       """
+      # TODO: update this when you are working on new creative extentions!!!
+    #############################################################################
+    # Auxiliary methods for the chatbot.                                        #
+    #                                                                           #
+    # DO NOT CHANGE THE CODE BELOW!                                             #
+    #                                                                           #
+    #############################################################################
 
     def bot_name(self):
       return self.name

@@ -1,7 +1,32 @@
 #!/usr/bin/env python
 
 """Porter Stemming Algorithm
+This is the Porter stemming algorithm, ported to Python from the
+version coded up in ANSI C by the author. It may be be regarded
+as canonical, in that it follows the algorithm presented in
 
+Porter, 1980, An algorithm for suffix stripping, Program, Vol. 14,
+no. 3, pp 130-137,
+
+only differing from it at the points maked --DEPARTURE-- below.
+
+See also http://www.tartarus.org/~martin/PorterStemmer
+
+The algorithm as described in the paper could be exactly replicated
+by adjusting the points of DEPARTURE, but this is barely necessary,
+because (a) the points of DEPARTURE are definitely improvements, and
+(b) no encoding of the Porter stemmer I have seen is anything like
+as exact as this version, even with the points of DEPARTURE!
+
+Vivake Gupta (v@nano.com)
+
+Release 1: January 2001
+
+Further adjustments by Santiago Bruno (bananabruno@gmail.com)
+to allow word input not restricted to one word per line, leading
+to:
+
+release 2: July 2008
 """
 
 import sys
@@ -36,7 +61,16 @@ class PorterStemmer:
         return 1
 
     def m(self):
+        """m() measures the number of consonant sequences between k0 and j.
+        if c is a consonant sequence and v a vowel sequence, and <..>
+        indicates arbitrary presence,
 
+           <c><v>       gives 0
+           <c>vc<v>     gives 1
+           <c>vcvc<v>   gives 2
+           <c>vcvcvc<v> gives 3
+           ....
+        """
         n = 0
         i = self.k0
         while 1:
@@ -79,6 +113,13 @@ class PorterStemmer:
         return self.cons(j)
 
     def cvc(self, i):
+        """cvc(i) is TRUE <=> i-2,i-1,i has the form consonant - vowel - consonant
+        and also if the second c is not w,x or y. this is used when trying to
+        restore an e at the end of a short  e.g.
+
+           cav(e), lov(e), hop(e), crim(e), but
+           snow, box, tray.
+        """
         if i < (self.k0 + 2) or not self.cons(i) or self.cons(i-1) or not self.cons(i-2):
             return 0
         ch = self.b[i]
@@ -110,7 +151,26 @@ class PorterStemmer:
             self.setto(s)
 
     def step1ab(self):
+        """step1ab() gets rid of plurals and -ed or -ing. e.g.
 
+           caresses  ->  caress
+           ponies    ->  poni
+           ties      ->  ti
+           caress    ->  caress
+           cats      ->  cat
+
+           feed      ->  feed
+           agreed    ->  agree
+           disabled  ->  disable
+
+           matting   ->  mat
+           mating    ->  mate
+           meeting   ->  meet
+           milling   ->  mill
+           messing   ->  mess
+
+           meetings  ->  meet
+        """
         if self.b[self.k] == 's':
             if self.ends("sses"):
                 self.k = self.k - 2
@@ -255,7 +315,14 @@ class PorterStemmer:
             self.k = self.k -1
 
     def stem(self, p, i=None, j=None):
-
+        """In stem(p,i,j), p is a char pointer, and the string to be stemmed
+        is from p[i] to p[j] inclusive. Typically i is zero and j is the
+        offset to the last character of a string, (p[j+1] == '\0'). The
+        stemmer adjusts the characters p[i] ... p[j] and returns the new
+        end-point of the string, k. Stemming never increases word length, so
+        i <= k <= j. To turn the stemmer into a module, declare 'stem' as
+        extern, and delete the remainder of this file.
+        """
         if i is None:
             i = 0
         if j is None:
@@ -266,6 +333,12 @@ class PorterStemmer:
         self.k0 = i
         if self.k <= self.k0 + 1:
             return self.b # --DEPARTURE--
+
+        # With this line, strings of length 1 or 2 don't go through the
+        # stemming process, although no mention is made of this in the
+        # published algorithm. Remove the line to match the published
+        # algorithm.
+
         self.step1ab()
         self.step1c()
         self.step2()
