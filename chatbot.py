@@ -4,6 +4,7 @@
 # PA6, CS124, Stanford, Winter 2018
 # v.1.0.2
 # Original Python code by Ignacio Cases (@cases)
+# Modified by Anand Upender, Chase Lortie, Kevin Liao
 ######################################################################
 import csv
 import math
@@ -15,7 +16,6 @@ from movielens import ratings
 from random import randint
 from PorterStemmer import PorterStemmer
 from random import randint
-import collections
 
 class Chatbot:
     """Simple class to implement the chatbot for PA 6."""
@@ -51,6 +51,7 @@ class Chatbot:
       self.movieIDToName = collections.defaultdict(lambda:0)
       self.movie_name_to_id()
       self.movie_history = []
+      self.movie_recommendations = []
 
     #############################################################################
     # 1. WARM UP REPL
@@ -58,18 +59,16 @@ class Chatbot:
 
     def greeting(self):
       """chatbot greeting message"""
-      # TODO: Write a short greeting message                                      #
-
-      greeting_message = "Hi I'm Leroy! I'm your movie best friend. Tell me some moviees you like or hate and I'll share some new ones you might like."
-
+      # A short greeting message                                      #
+      greeting_message = "Hi I'm Leroy! I'm your movie best friend. Tell me some movies you like or hate and I'll share some new ones you might like."
       return greeting_message
 
     def goodbye(self):
       """chatbot goodbye message"""
       #############################################################################
-      # TODO: Write a short farewell message                                      #
+      # A short farewell message                                      #
       #############################################################################
-
+      # TODO(kevin): reply based on mood of user!
       goodbye_message = 'Have a nice day!'
 
       #############################################################################
@@ -82,73 +81,6 @@ class Chatbot:
     #############################################################################
     # 2. Modules 2 and 3: extraction and transformation                         #
     #############################################################################
-
-    def LD(self, s, t, costs=(1, 1, 1)):
-      """ 
-          iterative_levenshtein(s, t) -> ldist
-          ldist is the Levenshtein distance between the strings 
-          s and t.
-          For all i and j, dist[i,j] will contain the Levenshtein 
-          distance between the first i characters of s and the 
-          first j characters of t
-          
-          costs: a tuple or a list with three integers (d, i, s)
-                 where d defines the costs for a deletion
-                       i defines the costs for an insertion and
-                       s defines the costs for a substitution
-      """
-      rows = len(s)+1
-      cols = len(t)+1
-      deletes, inserts, substitutes = costs
-      
-      dist = [[0 for x in range(cols)] for x in range(rows)]
-      # source prefixes can be transformed into empty strings 
-      # by deletions:
-      for row in range(1, rows):
-          dist[row][0] = row * deletes
-      # target prefixes can be created from an empty source string
-      # by inserting the characters
-      for col in range(1, cols):
-          dist[0][col] = col * inserts
-          
-      for col in range(1, cols):
-          for row in range(1, rows):
-              if s[row-1] == t[col-1]:
-                  cost = 0
-              else:
-                  cost = substitutes
-              dist[row][col] = min(dist[row-1][col] + deletes,
-                                   dist[row][col-1] + inserts,
-                                   dist[row-1][col-1] + cost) # substitution
-      #for r in range(rows):
-          #print(dist[r])
-      
-   
-      return dist[row][col]
-  # default:
-  #print(iterative_levenshtein("abc", "xyz"))
-  # the costs for substitions are twice as high as inserts and delets:
-  #print(iterative_levenshtein("abc", "xyz", costs=(1, 1, 2)))
-  # inserts and deletes are twice as high as substitutes
-  #print(iterative_levenshtein("abc", "xyz", costs=(2, 2, 1)))
-  #print(iterative_levenshtein("flaw", "lawn"))
-
-    # def LD(self, s, t):
-    #   if s == "":
-    #     return len(t)
-    #   if t == "":
-    #     return len(s)
-    #   if s[-1] == t[-1]:
-    #     cost = 0
-    #   else:
-    #     cost = 1
-       
-    #   res = min([self.LD(s[:-1], t)+1,
-    #            self.LD(s, t[:-1])+1, 
-    #            self.LD(s[:-1], t[:-1]) + cost])
-    #   return res
-#print(LD("Python", "Peithen"))
-
     def process(self, input):
       """Takes the input string from the REPL and call delegated functions
       that
@@ -162,258 +94,240 @@ class Chatbot:
         #let me hear another one
       """
 
-      #regex_main = "([\w\s,']*)(it|that|\"[()-.\w\s]*\")([\w\s,']*)" #For doing history/remembering
-      if self.corrected_movie_trigger == False:
-        regex_main = "([\w\s,']*)(\b(?:it|that|It|That)\b|\"[()-.\w\s]*\")([\w\s,']*)(?:\"([\w\s(),]*)\"([\w\s,']*))*" # includes BOTH two-movie feature AND remembering-history feature
+      if self.corrected_movie_trigger == False and len(self.movie_recommendations) == 0:
+        regex_main = "([\w\s,']*)(\b(?:it|that|It|That)\b|\"[()-.,':\w\s]*\")([\w\s,']*)(?:\"([\w\s(),]*)\"([\w\s,']*))*" # includes BOTH two-movie feature AND remembering-history feature
       else:
-        regex_main = "(no|No|yes|Yes)()()()" #FOR REPONSE TO MOVIE CORRECTION FEATURE, ONLY WNAT YES OR NO
-      #regex_main = "([\w\s,']*)\"([\w\s(),\:\-\"\'\<\>\?\!\&]*)\"([\w\s,']*)" #three capture groups
+        regex_main = "(no|No|yes|Yes)()()()" #FOR REPONSE TO MOVIE CORRECTION FEATURE, ONLY WANT YES OR NO
 
-
+      # PRIVATE INSTANCE VARIABLES 
       movie_match = ""
       movie_match_2 = "" #second movie
-      two_movie_matches = []
+      # two_movie_matches = []  #Can remove?
       parsed_input = "" 
       currMovieId = -1
       currMovieId2 = -1 #same method for dealing with a second movie
-
 
       match = re.findall(regex_main, input)
       # print "match: {}".format(match) # DEBUGGING info
 
       if match == []:
-
-        # (CM6: Emotion detection)
+        #CODE FOR REMEMBERING MOVIE INPUTS
+        referenceWord = ['it','It','that','That']
         parsed_input = self.parseInput(input)
-        currInputEmotion = [0,0,0,0,0]
-        for word in parsed_input:
-          if word in self.emotion:
-            for index, emotion in enumerate(self.emotion[word]):
-              if emotion == 1:      # if this word has this emotion
-                self.userEmotions[index] += 1
-                currInputEmotion[index] += 1
-        
-        return self.arbitraryInputHelper(input, currInputEmotion)
-
-        if len(self.userMovies) == 0:
-          return "Please type a valid response. Movies should be in 'quotations'" #first time user doesn't know how to input text
+        intersection = list(set(parsed_input) & set(referenceWord))
+        if len(intersection) > 0 and len(self.movie_history) > 0: #if someone references it or that without a movie
+          movie_match = self.movie_history[len(self.movie_history) - 1]
         else:
-          return "I want to hear about more movies!"    # edge case when user gets bored
-      else:
+          return self.noMatchHelper(input)
+
+      if movie_match == "":
         movie_match = match[0][1].replace('"', "")
         movie_match_2 = match[0][3].replace('"', "") # adds second movie, might be NULL string if single movie
+      if parsed_input == "":
         parsed_input = match[0][0] + match[0][2]
-
         parsed_input = self.parseInput(parsed_input)
 
-        # CONFIRMING SPELL CHECK RECOMMENDATION
-        if parsed_input[0] == "No" or parsed_input[0] == "no": #IF USER INPUTS NO FOR CONFIRMING MOVIE
-          if self.corrected_movie_trigger == True:
-            self.corrected_movie_trigger = False
-            return "Hmmm... okay then. Can you retype the movie or talk about another one?"
-        elif parsed_input[0] == "Yes" or parsed_input[0] == "yes": #IF USER INPUTS YES FOR CONFIRMING MOVIE
-          if self.corrected_movie_trigger == True:
-            self.corrected_movie_trigger = False
-            movie_match = self.movie_history[len(self.movie_history) - 1]
-        if movie_match == "" and self.corrected_movie_trigger == False:
-          return "Please type a movie within quotation marks"
-        
-        # CHECK IF MOVIE IS PRESENT + (CM5: Arbitrary input)
-        if movie_match == "":
-          return "Please type a movie within quotation marks" # ORIGINAL
-          # return self.arbitraryInputHelper(parsed_input,[])
-
-        #CODE FOR REMEMBERING MOVIE INPUTS
-        if movie_match == "it" or movie_match == "that" or movie_match == "It" or movie_match == "That": #if someone references it or that without a movie
-          if len(self.movie_history) > 0:
-            movie_match = self.movie_history[len(self.movie_history) - 1]
+      # CONFIRMING SPELL CHECK RECOMMENDATION OR CONTINUED MOVIE RECOMMENDATION
+      if parsed_input[0] == "No" or parsed_input[0] == "no": #IF USER INPUTS NO FOR CONFIRMING MOVIE
+        if self.corrected_movie_trigger == True:  #SPELL CHECK RECOMMENDATION
+          self.corrected_movie_trigger = False
+          return "Hmmm... okay then. Can you retype the movie or talk about another one?"
+        if len(self.movie_recommendations) != 0:  #CONTINUE MOVIE RECOMMENDATION
+          self.movie_recommendations = []
+          return " Got it! \n Tell me some more movies you like or hate! \n Or enter \":quit\" if you're done, but I hope you don't want to leave yet."
+      elif parsed_input[0] == "Yes" or parsed_input[0] == "yes": #IF USER INPUTS YES FOR CONFIRMING MOVIE
+        if self.corrected_movie_trigger == True:  #SPELL CHECK
+          self.corrected_movie_trigger = False
+          movie_match = self.movie_history[len(self.movie_history) - 1]
+        if len(self.movie_recommendations) != 0:  #CONTINUE MOVIE RECOMMENDATION
+          recommendation = self.movie_recommendations.pop(0)
+          response = " I also suggest you watch \"%s\"" % (recommendation)
+          if len(self.movie_recommendations) == 0:
+            response += " Those are some quick recommendations! Tell me some more movies you like or hate! \n Or enter \":quit\" if you're done, but I hope you don't want to leave yet."
           else:
-            response = "I'm sorry, I don't know what \"%s\" is. Please input a movie!" %movie_match
+            response += " Would you like to hear another recommendation? Please respond with yes or no."
+          return response
+
+      # EDGE CASE: WHEN USER ENTERS EMPTY QUOTATIONS
+      if movie_match == "":
+        return "Please type a movie within quotation marks"
+
+      # CODE FOR REMEMBERING MOVIE INPUTS # TODO(anand): do we still need this? I moved the logic upward
+      if movie_match == "it" or movie_match == "that" or movie_match == "It" or movie_match == "That": #if someone references it or that without a movie
+        if len(self.movie_history) > 0:
+          movie_match = self.movie_history[len(self.movie_history) - 1]
+        else:
+          response = "I'm sorry, I don't know what \"%s\" is. Please input a movie!" %movie_match
+          return response
+
+      # CHECK IF MOVIES EXISTS AND GIVES SUGGESTION 
+      min_distance = 1000
+      corrected_movie = ""
+      if movie_match in self.movieDict:
+        for mID in self.userMovies:
+          if movie_match == self.movieIDToName[mID]:
+            return "Already got that! Please give me another movie!"
+        currMovieId = self.movieDict[movie_match]
+        self.movie_history.append(movie_match)
+      else:
+        for movie in self.movieDict:
+          edit_distance = self.LD(movie, movie_match) # check for smallest edit distance
+          if edit_distance < min_distance:
+            corrected_movie = movie
+            min_distance = edit_distance
+        self.corrected_movie_trigger = True
+        self.movie_history.append(corrected_movie)
+        return "Sorry, did you mean \"%s\"? Please respond with yes or no." %corrected_movie #ask for "best" movie
+        #return "Sorry, but that movie is too hip for me, or it might not exist! Can you tell me about another movie?"
+      if movie_match_2 in self.movieDict: #checks if second movie exists
+        currMovieId2 = self.movieDict[movie_match_2]
+
+      # EXTRACT SENTIMENT
+      pos_words = []
+      neg_words = []
+
+      #INITIALIZE RESPONSE VARIABLES
+      opposite_sentiment_trigger = False # User has different feelings about two movies
+      same_sentiment_trigger = False #User has same feelings about two movies
+
+      negationTrigger = False   # triggers at neg words
+      objectTrigger = False     # triggers based on sentence strucutre (I really like star wars versus, star wars was really bad)
+      response_intensifier = ""
+      response_verb = ""
+      response_verb_2 = "" #for second movie
+      response_adjective = ""
+      response_adjective_2 = "" # for second movie
+
+      for word in parsed_input:
+
+        # CHECKING FOR SIMILARITY WORDS WHEN TWO MOVIES EXIST
+        if word in self.disimilarity_words:
+          opposite_sentiment_trigger = True #if found words like "but"
+        if word in self.similarity_words:
+          same_sentiment_trigger = True #if found words like "both"
+
+
+        # INTENSIFIERS
+        if word in self.intensifiersSubject:
+          response_intensifier = word
+        if word in self. intensifiersObject:
+          response_intensifier  = word
+          objectTrigger = True
+
+        if word in self.strongPosAdjectives or word in self.strongNegAdjectives:
+          objectTrigger = True
+          response_adjective = word
+        if word in self.strongPosVerbs or word in self.strongNegVerbs:
+          response_verb = word
+
+        word = self.stemmer.stem(word)
+
+        if word in self.sentiment:
+          sentiment = self.sentiment[word]
+
+          if negationTrigger == True:
+            negWord = "pos"
+            posWord = "neg"
+          else:
+            negWord = "neg"
+            posWord = "pos"
+          if sentiment == negWord:
+            neg_words.append(word)
+          elif sentiment == posWord:
+            pos_words.append(word)
+
+        if word in self.negationWords:
+          negationTrigger = True
+        if word in self.punctuation:
+          negationTrigger = False
+
+      # DETERMINE COUNTS FOR NEG AND POS WORDS
+      if len(neg_words) == len(pos_words) and response_adjective == "" and response_verb == "": # IF NO POS AND NEG (INCLUDING STRONG ONES WE HARD CODE)
+        return "So how do you really feel about %s." %movie_match
+      elif len(pos_words) > len(neg_words):
+        if response_adjective == "": 
+          response_adjective = "good"
+        if response_verb == "": 
+          response_verb = "liked"
+        self.userMovies[currMovieId] = 1
+        # print self.userMovies[currMovieId]
+
+        #PART OF MULTIPLE MOVIE CODE
+        if currMovieId2 != -1: #if there is a second movie
+          if same_sentiment_trigger == True and opposite_sentiment_trigger == False: #if sentiment for two movies is same
+            self.userMovies[currMovieId2] = 1
+            response_verb_2 = response_verb
+            response_adjective_2 = response_adjective
+          elif same_sentiment_trigger == False and opposite_sentiment_trigger == True:
+            self.userMovies[currMovieId2] = -1
+            response_verb_2 = "disliked"
+            response_adjective_2 = "bad"
+          else:
+            response = "I don't know how you felt about those two movies, could you clarify for me?"
             return response
 
+        #END PART OF MULTIPLE MOVIE CODE
 
-        #CHECK IF MOVIES EXISTS 
-        min_distance = 1000
-        corrected_movie = ""
-        if movie_match in self.movieDict:
-          for mID in self.userMovies:
-            if movie_match == self.movieIDToName[mID]:
-              return "Already got that! Please give me another movie!"
-          currMovieId = self.movieDict[movie_match]
-          self.movie_history.append(movie_match)
-        else:
-          for movie in self.movieDict:
-            edit_distance = self.LD(movie, movie_match) # check for smallest edit distance
-            if edit_distance < min_distance:
-              corrected_movie = movie
-              min_distance = edit_distance
-          self.corrected_movie_trigger = True
-          self.movie_history.append(corrected_movie)
-          return "Sorry, did you mean \"%s\"? Please respond with yes or no." %corrected_movie #ask for "best" movie
-          #return "Sorry, but that movie is too hip for me, or it might not exist! Can you tell me about another movie?"
-        if movie_match_2 in self.movieDict: #checks if second movie exists
-          currMovieId2 = self.movieDict[movie_match_2]
+      elif len(neg_words) > len(pos_words) and not objectTrigger:
+        if response_adjective == "": 
+          response_adjective = "bad"
+        if response_verb == "": 
+          response_verb = "disliked"
+        self.userMovies[currMovieId] = -1
+        # print self.userMovies[currMovieId]
 
-        # EXTRACT SENTIMENT
-        pos_words = []
-        neg_words = []
-
-        #INITIALIZE RESPONSE VARIABLES
-
-        opposite_sentiment_trigger = False # User has different feelings about two movies
-        same_sentiment_trigger = False #User has same feelings about two movies
-
-        negationTrigger = False   # triggers at neg words
-        objectTrigger = False     # triggers based on sentence strucutre (I really like star wars versus, star wars was really bad)
-        response_intensifier = ""
-        response_verb = ""
-        response_verb_2 = "" #for second movie
-        response_adjective = ""
-        response_adjective_2 = "" # for second movie
-
-        for word in parsed_input:
-
-          # CHECKING FOR SIMILARITY WORDS WHEN TWO MOVIES EXIST
-          if word in self.disimilarity_words:
-            opposite_sentiment_trigger = True #if found words like "but"
-          if word in self.similarity_words:
-            same_sentiment_trigger = True #if found words like "both"
-
-
-          # INTENSIFIERS
-          if word in self.intensifiersSubject:
-            response_intensifier = word
-          if word in self. intensifiersObject:
-            response_intensifier  = word
-            objectTrigger = True
-
-          if word in self.strongPosAdjectives or word in self.strongNegAdjectives:
-            objectTrigger = True
-            response_adjective = word
-          if word in self.strongPosVerbs or word in self.strongNegVerbs:
-            response_verb = word
-
-          word = self.stemmer.stem(word)
-
-          if word in self.sentiment:
-            sentiment = self.sentiment[word]
-
-            if negationTrigger == True:
-              negWord = "pos"
-              posWord = "neg"
-            else:
-              negWord = "neg"
-              posWord = "pos"
-            if sentiment == negWord:
-              neg_words.append(word)
-            elif sentiment == posWord:
-              pos_words.append(word)
-
-          if word in self.negationWords:
-            negationTrigger = True
-          if word in self.punctuation:
-            negationTrigger = False
-
-        # DETERMINE COUNTS FOR NEG AND POS WORDS
-        if len(neg_words) == len(pos_words) and response_adjective == "" and response_verb == "": # IF NO POS AND NEG (INCLUDING STRONG ONES WE HARD CODE)
-          return "So how do you really feel about %s." %movie_match
-        elif len(pos_words) > len(neg_words):
-          if response_adjective == "": 
+        #PART OF MULTIPLE MOVIE CODE
+        if currMovieId2 != -1: # if there is a second movie
+          if same_sentiment_trigger == True and opposite_sentiment_trigger == False: 
+            self.userMovies[currMovieId2] = -1
+            response_verb_2 = response_verb
+            response_adjective_2 = response_adjective
+          elif same_sentiment_trigger == False and opposite_sentiment_trigger == True:
+            self.userMovies[currMovieId2] = 1
+            response_verb_2 = "liked"
             response_adjective = "good"
-          if response_verb == "": 
-            response_verb = "liked"
-          self.userMovies[currMovieId] = 1
-          print self.userMovies[currMovieId]
-
-          #PART OF MULTIPLE MOVIE CODE
-          if currMovieId2 != -1: #if there is a second movie
-            if same_sentiment_trigger == True and opposite_sentiment_trigger == False: #if sentiment for two movies is same
-              self.userMovies[currMovieId2] = 1
-              response_verb_2 = response_verb
-              response_adjective_2 = response_adjective
-            elif same_sentiment_trigger == False and opposite_sentiment_trigger == True:
-              self.userMovies[currMovieId2] = -1
-              response_verb_2 = "disliked"
-              response_adjective_2 = "bad"
-            else:
-              response = "I don't know how you felt about those two movies, could you clarify for me?"
-              return response
-
-          #END PART OF MULTIPLE MOVIE CODE
-
-        elif len(neg_words) > len(pos_words) and not objectTrigger:
-          if response_adjective == "": 
-            response_adjective = "bad"
-          if response_verb == "": 
-            response_verb = "disliked"
-          self.userMovies[currMovieId] = -1
-          print self.userMovies[currMovieId]
-
-          #PART OF MULTIPLE MOVIE CODE
-          if currMovieId2 != -1: # if there is a second movie
-            if same_sentiment_trigger == True and opposite_sentiment_trigger == False: 
-              self.userMovies[currMovieId2] = -1
-              response_verb_2 = response_verb
-              response_adjective_2 = response_adjective
-            elif same_sentiment_trigger == False and opposite_sentiment_trigger == True:
-              self.userMovies[currMovieId2] = 1
-              response_verb_2 = "liked"
-              response_adjective = "good"
-            else:
-              response = "I don't know how you felt about those two movies, could you clarify for me?"
-              return response
-
-        # APPEND INTENSIFIER IN RESPONSE
-        if response_intensifier != "":
-          if objectTrigger:
-            response_adjective = response_intensifier + " " + response_adjective
           else:
-            response_verb = response_intensifier + " " + response_verb
+            response = "I don't know how you felt about those two movies, could you clarify for me?"
+            return response
 
-        ############# RESPONSES #################
-        if self.is_turbo == True:
-          response = 'processed %s in creative mode!!' % input
+      # APPEND INTENSIFIER IN RESPONSE
+      if response_intensifier != "":
+        if objectTrigger:
+          response_adjective = response_intensifier + " " + response_adjective
         else:
-          if objectTrigger:
-            response = "So, you thought \"%s\" was %s" % (movie_match, response_adjective)
-            if currMovieId2 != -1:
-              response += " and  %s was \"%s\"" %(movie_match_2, response_adjective_2) #append if second movie exists
-            else:
-              response += "."
-          else:
-            response = "So, you %s \"%s\"" % (response_verb, movie_match)
-            if currMovieId2 != -1:
-              response += " and you %s \"%s\"" %(response_verb_2, movie_match_2) #append if second movie exists
-            else:
-              response += "."
+          response_verb = response_intensifier + " " + response_verb
 
-          #START INQUIRING ABOUT THEIR MOVIE PREFERENCE GENRES
-          response += self.genrePatternHelper()
+      ############# RESPONSES #################
+      # CLARIFICATION: already in creative mode
+      # if self.is_turbo == True:
+      #   response = 'processed %s in creative mode!!' % input
+      if objectTrigger:
+        response = "So, you thought \"%s\" was %s" % (movie_match, response_adjective)
+        if currMovieId2 != -1:
+          response += " and  %s was \"%s\"" %(movie_match_2, response_adjective_2) #append if second movie exists
+        else:
+          response += "."
+      else:
+        response = "So, you %s \"%s\"" % (response_verb, movie_match)
+        if currMovieId2 != -1:
+          response += " and you %s \"%s\"" %(response_verb_2, movie_match_2) #append if second movie exists
+        else:
+          response += "."
 
-          # CHECK FOR MORE MOVEIS NEEDED OR RECOMMENDATION MADE
-          if len(self.userMovies) >= 4:
-            recommendations = self.recommend(self.userMovies)
+      #START INQUIRING ABOUT THEIR MOVIE PREFERENCE GENRES
+      response += self.genrePatternHelper()
 
-            # TODO: Would you like to hear another recommendation? (Or enter :quit if you're done.)
-            if objectTrigger:
-              response += " Thank you! \n That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (recommendations[0])
-            else:
-              response += " Thank you! \n That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (recommendations[0])
-          
-          else:
-            response += " How about another movie?"
+      # CHECK FOR MORE MOVEIS NEEDED OR RECOMMENDATION MADE
+      if len(self.userMovies) < 5:  #TODO: need to check if bot takes at least 5 movies
+        response += " How about another movie?"
+      else:
+        self.movie_recommendations = self.recommend(self.userMovies)
+        recommendation = self.movie_recommendations.pop(0)
+        response += " \n Thank you! That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (recommendation)
+        response += " Would you like to hear another recommendation? Please respond with yes or no."
+
 
       return response
-
-    def parseInput(self, myInput):
-       # FIND PUNCTUATION AND MAKE OWN WORD (ADD SPACE)
-      parsed_input = []
-      for index,char in enumerate(myInput):
-        if char in self.punctuation:
-          myInput = myInput[:index] + " " + myInput[index:]
-      parsed_input = myInput.split(" ")
-      filter(None, parsed_input)
-      return parsed_input
 
 
     #############################################################################
@@ -454,9 +368,6 @@ class Chatbot:
         line = map(int, line[1:])
         self.emotion[currEmotion] = line
 
-      # Original: not stemmed
-      # reader = csv.reader(open('data/sentiment.txt', 'rb'))
-      # self.sentiment = dict(reader) 
       self.binarize()
 
 
@@ -501,6 +412,72 @@ class Chatbot:
         recommendations.append(self.movieIDToName[movieID]) # Note: movieID happens to be same as index of movie in list
       # print 'recommendation list: {}'.format(recommendations) #DEBUGGING INFO
       return recommendations
+
+    ####### ADDITIONAL HELPER FUNCTIONS ########
+    def parseInput(self, myInput):
+       # FIND PUNCTUATION AND MAKE OWN WORD (ADD SPACE)
+      parsed_input = []
+      for index,char in enumerate(myInput):
+        if char in self.punctuation:
+          myInput = myInput[:index] + " " + myInput[index:]
+      parsed_input = myInput.split(" ")
+      filter(None, parsed_input)
+      return parsed_input
+
+    def LD(self, s, t, costs=(1, 1, 1)):
+      """ 
+      iterative_levenshtein(s, t) -> ldist
+      ldist is the Levenshtein distance between the strings 
+      s and t.
+      For all i and j, dist[i,j] will contain the Levenshtein 
+      distance between the first i characters of s and the 
+      first j characters of t
+      
+      costs: a tuple or a list with three integers (d, i, s)
+              where d defines the costs for a deletion
+                    i defines the costs for an insertion and
+                    s defines the costs for a substitution
+      """
+      rows = len(s)+1
+      cols = len(t)+1
+      deletes, inserts, substitutes = costs
+      
+      dist = [[0 for x in range(cols)] for x in range(rows)]
+      # source prefixes can be transformed into empty strings 
+      # by deletions:
+      for row in range(1, rows):
+          dist[row][0] = row * deletes
+      # target prefixes can be created from an empty source string
+      # by inserting the characters
+      for col in range(1, cols):
+          dist[0][col] = col * inserts
+          
+      for col in range(1, cols):
+          for row in range(1, rows):
+              if s[row-1] == t[col-1]:
+                  cost = 0
+              else:
+                  cost = substitutes
+              dist[row][col] = min(dist[row-1][col] + deletes,
+                                   dist[row][col-1] + inserts,
+                                   dist[row-1][col-1] + cost) # substitution
+      #for r in range(rows):
+          #print(dist[r])
+   
+      return dist[row][col]
+
+    def noMatchHelper(self, raw_input):
+      # (CM6: Emotion detection)
+      parsed_input = self.parseInput(raw_input)
+      currInputEmotion = [0,0,0,0,0]
+      for word in parsed_input:
+        if word in self.emotion:
+          for index, emotion in enumerate(self.emotion[word]):
+            if emotion == 1:      # if this word has this emotion
+              self.userEmotions[index] += 1
+              currInputEmotion[index] += 1
+      
+      return self.arbitraryInputHelper(raw_input, currInputEmotion)
 
     # (CM5 Arbitrary input and CM? Identifying and responding to emotions)
     def arbitraryInputHelper(self, rawInput, currInputEmotion):
@@ -550,6 +527,8 @@ class Chatbot:
           return sadResponses[random]
 
       else:
+        if len(self.userMovies) == 0:
+          return defaultResponses[random] + " Please type a movie within quotation marks."
         return defaultResponses[random] + " Are you sure we are still talking about movies?"
 
     def reverseSubject(self, userInput):
@@ -559,8 +538,8 @@ class Chatbot:
         word = userInput[idx]
         if word == 'i' or word == 'I':
           rawResponse.append('you')
-          
-            
+        if word == 'me':
+          rawResponse.append('you')
         elif word == 'you':
           if idx == len(userInput)-1:
             rawResponse.append('me')
@@ -594,10 +573,9 @@ class Chatbot:
       if userGenresPos and userGenresPos[mostPopGenre] >= userGenresNeg[leastPopGenre] and userGenresPos[mostPopGenre] >= 2: #they had more of a fave than least fave
         return " I didn't know you love %s...interesting!" % mostPopGenre
       elif userGenresNeg and userGenresNeg[leastPopGenre] > userGenresPos[mostPopGenre] and userGenresNeg[leastPopGenre] >= 2: #they had more of a least fave than fave
-        return " I'm not a fan of %s movies either." % mostPopGenre
+        return " I'm not a fan of %s movies either." % leastPopGenre#mostPopGenre
 
       return ""
-        
 
 
     #############################################################################
@@ -633,13 +611,14 @@ class Chatbot:
       EXTRA FEATURES:
       1) As a user start telling Leroy about movies they like, he can pick up on their favorite or least favorite genres and let the user know. (must be at least 2 similar movie genres)
       2) If a user omits a year in the movie, Leroy will correct them and make sure it's the right one
-      3) User can get up to XXXX movie recommendations
+      3) User can get up to XXXX movie recommendations #TODO: kevin
 
       List of TODOs:
+      - Update intro section to reflect instructions carefully #TODO: kevin
       - Edge case: after recommendation, what chatbot should do
       - Speaking Fluently
-      - Identifying movies without quotation marks or perfect capitalization
-      - Using non-binarized dataset
+      - Identifying movies without quotation marks or perfect capitalization (probably not)
+      - Using non-binarized dataset (probably not)
       """
       # TODO: update this when you are working on new creative extentions!!!
     #############################################################################
