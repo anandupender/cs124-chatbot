@@ -52,7 +52,7 @@ class Chatbot:
     #############################################################################
 
     def greeting(self):
-      greeting_message = "Hi I'm Leroy! I'm your movie best friend. Tell me some movies you like or hate and I'll share some new ones you might like."
+      greeting_message = "Hey I'm Leroy! I'm your movie best friend. Tell me about some movies you've watched and I'll learn what you like bit by bit...get it...cause bits"
 
       return greeting_message
 
@@ -63,7 +63,7 @@ class Chatbot:
         goodbye_message += 'my friend!'
       else:
         goodbye_message += self.userName + '!'
-      goodbye_message += ' Have a nice day!'
+      goodbye_message += ' Have a A+ Triple Awesome Day!'
 
       return goodbye_message
 
@@ -110,7 +110,7 @@ class Chatbot:
       if parsed_input[0] == "No" or parsed_input[0] == "no": #IF USER INPUTS NO FOR CONFIRMING MOVIE
         if self.corrected_movie_trigger == True:  #SPELL CHECK RECOMMENDATION
           self.corrected_movie_trigger = False
-          return "Hmmm... okay then. Can you retype the movie or talk about another one?"
+          return "Hmmm...okay then. What movie ARE you talking about?"
         if len(self.movie_recommendations) != 0:  #CONTINUE MOVIE RECOMMENDATION
           self.movie_recommendations = []
           return " Got it! \n Tell me some more movies you like or hate! \n Or enter \":quit\" if you're done, but I hope you don't want to leave yet."
@@ -136,7 +136,7 @@ class Chatbot:
         if len(self.movie_history) > 0:
           movie_match = self.movie_history[len(self.movie_history) - 1]
         else:
-          response = "I'm sorry, I don't know what \"%s\" is. Please input a movie!" %movie_match
+          response = "I'm sorry, I don't know what \"%s\" is. We're talking about movies here!" %movie_match
           return response
 
       # CHECK IF MOVIES EXISTS AND GIVES SUGGESTION 
@@ -145,7 +145,7 @@ class Chatbot:
       if movie_match in self.movieDict:
         for mID in self.userMovies:
           if movie_match == self.movieIDToName[mID]:
-            return "Already got that! Please give me another movie!"
+            return "Wow you must really love %s to repeat it to me. Tell me about another one!"%movie_match
         currMovieId = self.movieDict[movie_match]
         self.movie_history.append(movie_match)
       else:
@@ -240,7 +240,7 @@ class Chatbot:
             response_verb_2 = "disliked"
             response_adjective_2 = "bad"
           else:
-            response = "I don't know how you felt about those two movies, could you clarify for me?"
+            response = "I can't tell how you felt about those two movies, could you clarify for me?"
             return response
 
       elif len(neg_words) > len(pos_words) and not objectTrigger:
@@ -262,7 +262,7 @@ class Chatbot:
             response_verb_2 = "liked"
             response_adjective = "good"
           else:
-            response = "I don't know how you felt about those two movies, could you clarify for me?"
+            response = "I can't tell how you felt about those two movies, could you clarify for me?"
             return response
 
       # APPEND INTENSIFIER IN RESPONSE
@@ -290,7 +290,8 @@ class Chatbot:
           response += "."
 
       #START INQUIRING ABOUT THEIR MOVIE PREFERENCE GENRES
-      response += self.genrePatternHelper()
+      if len(self.userMovies) >= 3: 
+        response += self.genrePatternHelper()
 
       # CHECK FOR MORE MOVEIS NEEDED OR RECOMMENDATION MADE
       if len(self.userMovies) < 5:  #TODO: need to check if bot takes at least 5 movies
@@ -299,10 +300,10 @@ class Chatbot:
         self.movie_recommendations = self.recommend(self.userMovies)
         recommendation = self.movie_recommendations.pop(0)
         if self.userName == "":
-          response += " \n Thank you! That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (recommendation)
+          response += " \n Thank you! I know we've only been chatting for a short time but I totally get you. \n You should watch \"%s\"" % (recommendation)
         else:
-          response += " \n Thank you " + self.userName + "! That's enough for me to make a recommendation. \n I suggest you watch \"%s\"" % (recommendation)
-        response += " Would you like to hear another recommendation? Please respond with yes or no."
+          response += " \n Thank you " + self.userName + "! I know we've only been chatting for a short time but I totally get you. \n You should watch \"%s\"" % (recommendation)
+        response += " Do you want to hear other movies I had in mind? Please respond with yes or no."
 
 
       return response
@@ -490,7 +491,7 @@ class Chatbot:
       elif userInputLowerCase[0] == "when":
         return "I don't know when. I'm not your secretary."
       elif userInputLowerCase[0] == "why":
-        return "Why... that's a good question."
+        return "Why...that's a good question."
       elif userInputLowerCase[0] == "how":
         return "I don't know how. But I'd love to hear about some movies you've watched!"
         # return "I don't know how " + ' '.join(rawResponse[2:]) + ' ' + rawResponse[1]
