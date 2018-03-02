@@ -60,7 +60,7 @@ class Chatbot:
     def greeting(self):
       """chatbot greeting message"""
       # A short greeting message                                      #
-      greeting_message = "Hi I'm Leroy! I'm your movie best friend. Tell me some movies you like or hate and I'll share some new ones you might like. \n What is your name?"
+      greeting_message = "Hi I'm Leroy! I'm your movie best friend. Tell me some movies you like or hate and I'll share some new ones you might like."
       return greeting_message
 
     def goodbye(self):
