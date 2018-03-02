@@ -367,7 +367,7 @@ class Chatbot:
 
       # CM6 - RESPOND TO EMOTION
       self.emotion = collections.defaultdict(lambda:0)
-      emotionReader = csv.reader(file('data/emotions.txt'), delimiter=',', quoting=csv.QUOTE_MINIMAL)
+      emotionReader = csv.reader(file('deps/emotions.txt'), delimiter=',', quoting=csv.QUOTE_MINIMAL)
       for line in emotionReader:
         currEmotion = line[0]
         line = map(int, line[1:])
@@ -501,9 +501,6 @@ class Chatbot:
       # Get user name!
       if userInputLowerCase[0:3] == ["my","name","is"]:
         self.userName = ' '.join(userInput[3:])
-        return "Hi " + self.userName + "!"
-      if userInputLowerCase[0:2] == ["i","am"]:
-        self.userName = ' '.join(userInput[2:])
         return "Hi " + self.userName + "!"
 
       # Utilizes user input
@@ -642,7 +639,7 @@ class Chatbot:
 
       OTHER CREATIVE FEATURES
       1) As a user starts telling Leroy about movies they like, he can pick up on their favorite or least favorite genres and let the user know. (must be at least 2 similar movie genres)
-      2) Leroy will remember your name! Type: My name is ____ or I am ____
+      2) Leroy will remember your name! Type: My name is ____
       3) User can get up to 5 movie recommendations
       4) Makes sure user is inputing new movies
       """
